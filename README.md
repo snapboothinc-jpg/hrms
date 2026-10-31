@@ -525,11 +525,61 @@ Phase 1 to 2
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Requirements: Node.js 20.19 or newer, npm, and Docker Desktop (for local Supabase).
+The app requires a Supabase backend; the optional Gemini and outbox integrations can
+be configured later. See [the runbook](./docs/RUNBOOK.md) for all environment
+variables, deployment operations, and safety requirements.
+
+1. Install dependencies and create your local environment file:
+
+   ```sh
+   npm ci
+   cp .env.example .env
+   ```
+
+   On PowerShell, use `Copy-Item .env.example .env`.
+
+2. Start Docker Desktop, then start the local Supabase stack:
+
+   ```sh
+   npx supabase start
+   npx supabase status -o env
+   ```
+
+   Copy the local `API_URL`, `ANON_KEY`, and `SERVICE_ROLE_KEY` values from the
+   status output into the corresponding Supabase variables in `.env`. The example
+   already contains the local Postgres URL and port.
+
+3. Check and apply the reviewed SQL migrations to the local database:
+
+   ```sh
+   npm run db:check
+   npm run db:migrate
+   ```
+
+   Never run development migrations or demo seeding against production. Demo
+   fixtures are optional and require an empty, isolated development database;
+   follow the guarded steps in [the runbook](./docs/RUNBOOK.md#setup).
+
+4. Start the app:
+
+   ```sh
+
+   ```
+
+npm run dev
+
+````
+
+Open the local URL printed by Vite. `.env` is loaded for server-side runtime,
+migration, and seed commands; only `VITE_` variables are exposed to browser
+code.
+
+Useful validation commands:
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
+npm run typecheck
+npm test
+npm run lint
+npm run build
+````

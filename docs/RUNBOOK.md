@@ -24,18 +24,18 @@ page names a missing variable but never its value.
 4. Demo fixtures are not applied by `db:migrate`. For an isolated, empty development database only, set `HRMS_SEED_ENV=development` and run `npm run db:seed:demo` (requires `psql` and `DATABASE_URL`). The seed includes test-account credentials and must never be run against production.
 5. Demo accounts use the `@priorityhandling.demo` domain and password `Priority-Demo-2026!`. Remove demo data by signing in as a non-demo Super Admin and calling `remove_demo_data()`. Reset mutable demo rows for a fresh live test with `reset_demo_data()`.
 
-| Migration                                   | Responsibility                                                                                             | Consolidated source                     |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `0000_base_identity_organization.sql`       | Base identity, roles, organization, shared primitives, baseline RLS/grants                                 | `0000`                                  |
-| `0001_performance_competency.sql`           | Performance/competency schema and business operations                                                      | `0001`, `0002`                          |
-| `0002_storage_security.sql`                 | Evidence bucket policies, audit-history read policy, trigger search-path fixes                             | `0003` storage policies, `0004`, `0005` |
-| `0003_learning_training_ai.sql`             | Learning/training/AI/outbox schema and operations, Gemini-only settings                                    | `0006`–`0008`, `0013`                   |
-| `0004_succession_recognition_reporting.sql` | Succession, recognition and scoped report operations                                                       | `0010`                                  |
-| `0005_hrms_v2_remediation.sql`              | Evaluation acknowledgement/scale, course review, REST PATCH, scoped nav context                            | `0012`                                  |
-| `0006_demo_lifecycle.sql`                   | Guarded demo removal/reset functions (function definitions only)                                           | `0011` lifecycle functions              |
-| `0007_personal_goals.sql`                   | Employee-owned personal goals, review/progress lifecycle, scoped RLS, audit and idempotent write functions | Phase 3 continuation                    |
-| `0008_report_workspace.sql`                 | Owner-scoped saved report definitions, RLS-scoped export history, audit logging and idempotent writes      | Phase 3 continuation                    |
-| `0009_phase3_approvals_qualification.sql`   | Development/succession approvals, candidate qualifications, course due dates, reassessment dates, guarded transitions and notifications | Phase 3 continuation |
+| Migration                                   | Responsibility                                                                                                                          | Consolidated source                     |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `0000_base_identity_organization.sql`       | Base identity, roles, organization, shared primitives, baseline RLS/grants                                                              | `0000`                                  |
+| `0001_performance_competency.sql`           | Performance/competency schema and business operations                                                                                   | `0001`, `0002`                          |
+| `0002_storage_security.sql`                 | Evidence bucket policies, audit-history read policy, trigger search-path fixes                                                          | `0003` storage policies, `0004`, `0005` |
+| `0003_learning_training_ai.sql`             | Learning/training/AI/outbox schema and operations, Gemini-only settings                                                                 | `0006`–`0008`, `0013`                   |
+| `0004_succession_recognition_reporting.sql` | Succession, recognition and scoped report operations                                                                                    | `0010`                                  |
+| `0005_hrms_v2_remediation.sql`              | Evaluation acknowledgement/scale, course review, REST PATCH, scoped nav context                                                         | `0012`                                  |
+| `0006_demo_lifecycle.sql`                   | Guarded demo removal/reset functions (function definitions only)                                                                        | `0011` lifecycle functions              |
+| `0007_personal_goals.sql`                   | Employee-owned personal goals, review/progress lifecycle, scoped RLS, audit and idempotent write functions                              | Phase 3 continuation                    |
+| `0008_report_workspace.sql`                 | Owner-scoped saved report definitions, RLS-scoped export history, audit logging and idempotent writes                                   | Phase 3 continuation                    |
+| `0009_phase3_approvals_qualification.sql`   | Development/succession approvals, candidate qualifications, course due dates, reassessment dates, guarded transitions and notifications | Phase 3 continuation                    |
 
 `drizzle/seeds/demo.sql` contains the separated development fixtures originally in
 `0003`, `0009`, and `0011`; the final account names and password from `0014` are

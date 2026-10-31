@@ -268,19 +268,19 @@ function Page() {
                   : t.assignee_user === me?.user_id
                     ? has("succession.dept") || has("succession.manage")
                     : t.assignee_role === "hr_admin" && has("succession.manage")) && (
-                <>
-                  <Button size="sm" onClick={() => setAct({ task: t, decision: "approve" })}>
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setAct({ task: t, decision: "reject" })}
-                  >
-                    Return
-                  </Button>
-                </>
-              )}
+                  <>
+                    <Button size="sm" onClick={() => setAct({ task: t, decision: "approve" })}>
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setAct({ task: t, decision: "reject" })}
+                    >
+                      Return
+                    </Button>
+                  </>
+                )}
             </div>
           );
         if (t.workflow_type === "ai_recommendation")
