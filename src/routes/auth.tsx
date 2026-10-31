@@ -3,11 +3,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
-import { Loader2, Truck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/app/kit";
+import { BrandLogo } from "@/components/app/brand-logo";
 
 const search = z.object({ redirect: z.string().optional() });
 
@@ -36,13 +37,13 @@ const schema = z.object({
 });
 
 const DEMO = [
-  ["Super Admin", "superadmin@priorityhandling.demo"],
-  ["Admin", "admin@priorityhandling.demo"],
-  ["HR Administrator", "hr@priorityhandling.demo"],
-  ["Department Head", "depthead@priorityhandling.demo"],
-  ["Supervisor", "supervisor@priorityhandling.demo"],
-  ["Employee", "employee@priorityhandling.demo"],
-  ["Operations Manager", "ops@priorityhandling.demo"],
+  ["Super Admin", "victor.superadmin+priority@gmail.com"],
+  ["Admin", "nina.admin+priority@gmail.com"],
+  ["HR Administrator", "liza.hradmin+priority@gmail.com"],
+  ["Department Head", "maria.depthead+priority@gmail.com"],
+  ["Supervisor", "jose.supervisor+priority@gmail.com"],
+  ["Employee", "ana.employee+priority@gmail.com"],
+  ["Operations Manager", "carlo.opsmanager+priority@gmail.com"],
 ] as const;
 
 function safeRedirect(r?: string) {
@@ -76,31 +77,23 @@ function AuthPage() {
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="brand-band hidden flex-col justify-between p-10 lg:flex">
-        <div className="flex items-center gap-2 text-xl font-bold">
-          <Truck className="size-6 shrink-0" aria-hidden />
-          <span>Priority Handling Logistics, Inc.</span>
-        </div>
-        <div>
-          <h1 className="text-display font-bold">Performance and development, end to end.</h1>
-          <p className="mt-3 max-w-md opacity-85">
-            Evaluate against position profiles, assess competencies with evidence, and close gaps
-            that matter on the road and in the warehouse.
+    <main className="flex min-h-screen min-h-svh items-center justify-center bg-background px-4 py-8">
+      <div className="flex w-full max-w-[342px] flex-col items-center">
+        <BrandLogo className="size-8 rounded-none p-0 shadow-none" decorative />
+        <p className="mt-3 text-center text-sm font-bold leading-5 text-foreground">
+          Priority Handling Logistics, Inc.
+        </p>
+
+        <section className="surface mt-5 w-full p-4">
+          <h1 className="text-sm font-bold leading-5 text-foreground">Sign in</h1>
+          <p className="mt-1 text-xs leading-4 text-muted-foreground">
+            Use your work email and password.
           </p>
-        </div>
-        <p className="font-data text-sm opacity-70">Freight & logistics HR</p>
-      </div>
-      <div className="flex items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-          <h2 className="text-title font-bold">Sign in</h2>
-          <p className="mb-6 text-sm text-muted-foreground">
-            Accounts are created by your administrator.
-          </p>
+
           <form
             method="post"
             onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4"
+            className="mt-4 space-y-3 [&_label]:text-xs [&_label]:leading-4"
             noValidate
           >
             <Field
@@ -109,7 +102,13 @@ function AuthPage() {
               error={form.formState.errors.email?.message}
               required
             >
-              <Input id="email" type="email" autoComplete="email" {...form.register("email")} />
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                className="h-7 rounded-md bg-background text-sm"
+                {...form.register("email")}
+              />
             </Field>
             <Field
               label="Password"
@@ -121,6 +120,7 @@ function AuthPage() {
                 id="password"
                 type="password"
                 autoComplete="current-password"
+                className="h-7 rounded-md bg-background text-sm"
                 {...form.register("password")}
               />
             </Field>
@@ -129,25 +129,34 @@ function AuthPage() {
                 {err}
               </p>
             )}
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            <Button
+              type="submit"
+              className="min-h-7 h-7 w-full rounded-md text-xs"
+              disabled={form.formState.isSubmitting}
+            >
               {form.formState.isSubmitting && <Loader2 className="animate-spin" />} Sign in
             </Button>
           </form>
-          <details className="mt-8 rounded-md border bg-card p-3 text-sm">
-            <summary className="cursor-pointer font-bold">Demo accounts</summary>
+        </section>
+
+        {import.meta.env.DEV && (
+          <details className="surface mt-4 w-full p-3 text-sm">
+            <summary className="min-h-8 cursor-pointer content-center font-bold">
+              Demo accounts
+            </summary>
             <p className="mt-2 text-muted-foreground">
-              Demo data only. Password for all:{" "}
-              <code className="font-data">Priority-Demo-2026!</code>
+              Development demo data only. Password for all:{" "}
+              <code className="font-data">Test1234!</code>
             </p>
             <ul className="mt-2 space-y-1">
               {DEMO.map(([role, email]) => (
                 <li key={email}>
                   <button
                     type="button"
-                    className="w-full rounded px-2 py-1 text-left hover:bg-accent"
+                    className="min-h-8 w-full rounded px-2 py-1 text-left hover:bg-accent"
                     onClick={() => {
                       form.setValue("email", email);
-                      form.setValue("password", "Priority-Demo-2026!");
+                      form.setValue("password", "Test1234!");
                     }}
                   >
                     <span className="font-bold">{role}</span>{" "}
@@ -157,8 +166,8 @@ function AuthPage() {
               ))}
             </ul>
           </details>
-        </div>
+        )}
       </div>
-    </div>
+    </main>
   );
 }

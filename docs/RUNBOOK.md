@@ -22,7 +22,19 @@ page names a missing variable but never its value.
 2. The schema is maintained as reviewed SQL; `drizzle/schema.ts` is intentionally empty, and Drizzle snapshots are not used as schema authority. Add schema changes as reviewed SQL, then update the journal and run `npm run db:check`.
 3. Migration 0000 is the base identity/organization schema. The original source was consolidated into seven domain migrations; `0007_personal_goals.sql`, `0008_report_workspace.sql`, and `0009_phase3_approvals_qualification.sql` are additive Phase 3 changes for employee-owned goals, saved reports/export metadata, approval and qualification workflows, and learning/reassessment deadlines. Migration 0005 blocks before altering the fixed 1–5 scale if existing scores/snapshots require review. Migration 0003 sets Gemini-only provider configuration.
 4. Demo fixtures are not applied by `db:migrate`. For an isolated, empty development database only, set `HRMS_SEED_ENV=development` and run `npm run db:seed:demo` (requires `psql` and `DATABASE_URL`). The seed includes test-account credentials and must never be run against production.
-5. Demo accounts use the `@priorityhandling.demo` domain and password `Priority-Demo-2026!`. Remove demo data by signing in as a non-demo Super Admin and calling `remove_demo_data()`. Reset mutable demo rows for a fresh live test with `reset_demo_data()`.
+5. Seed accounts use `firstname.role+priority@gmail.com` addresses and the shared development password `Test1234!`. The seed contains seven role accounts and one Logistics Department. Remove demo data by signing in as a non-demo Super Admin and calling `remove_demo_data()`. `reset_demo_data()` clears mutable demo rows but does not recreate them; rebuild the isolated database and rerun the seed to restore a complete workflow.
+
+| Role | Seed account |
+| --- | --- |
+| Super Admin | `victor.superadmin+priority@gmail.com` |
+| Admin | `nina.admin+priority@gmail.com` |
+| HR Administrator | `liza.hradmin+priority@gmail.com` |
+| Department Head | `maria.depthead+priority@gmail.com` |
+| Supervisor | `jose.supervisor+priority@gmail.com` |
+| Employee | `ana.employee+priority@gmail.com` |
+| Operations Manager | `carlo.opsmanager+priority@gmail.com` |
+
+The shared password for every account in this table is `Test1234!`; use it only in isolated development environments.
 
 | Migration                                   | Responsibility                                                                                                                          | Consolidated source                     |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
@@ -36,10 +48,12 @@ page names a missing variable but never its value.
 | `0007_personal_goals.sql`                   | Employee-owned personal goals, review/progress lifecycle, scoped RLS, audit and idempotent write functions                              | Phase 3 continuation                    |
 | `0008_report_workspace.sql`                 | Owner-scoped saved report definitions, RLS-scoped export history, audit logging and idempotent writes                                   | Phase 3 continuation                    |
 | `0009_phase3_approvals_qualification.sql`   | Development/succession approvals, candidate qualifications, course due dates, reassessment dates, guarded transitions and notifications | Phase 3 continuation                    |
+| `0018_compact_demo_reset.sql`               | Remove obsolete fixture reseeding from `reset_demo_data()`; reset now clears mutable demo rows only                            | Current seed lifecycle                  |
 
-`drizzle/seeds/demo.sql` contains the separated development fixtures originally in
-`0003`, `0009`, and `0011`; the final account names and password from `0014` are
-applied directly in the seed. It is intentionally not listed in the migration journal.
+`drizzle/seeds/demo.sql` contains the separated, minimal Logistics Department development
+fixtures. It is intentionally not listed in the migration journal. Each seeded role is
+assigned by the permissions catalogue from the migrations; the shared fixture password
+is `Test1234!`. Never use this password outside isolated development data.
 The prior Drizzle snapshots had empty schemas and did not represent the SQL objects;
 they were removed. The SQL journal is the source used by `drizzle-kit migrate`.
 `npm run db:check` validates journal/file parity, order, table RLS enablement,
@@ -84,7 +98,7 @@ transaction as the business change. Processing is asynchronous:
 - Unit: `npm test` (includes evaluation-scale, AI configuration, REST PATCH validation, and cursor traversal tests).
 - Live access tests mutate demo records and are disabled unless all staging guards are set. They do not read `.env`. Configure `HRMS_TEST_ENV=staging`, `RUN_ACCESS_TESTS=1`, `HRMS_STAGING_SUPABASE_URL`, `HRMS_STAGING_SUPABASE_PUBLISHABLE_KEY`, and `HRMS_STAGING_DEMO_PASSWORD`; never point these variables at the shared preview/published backend.
 - To test the ungranted Department Head case, also provide `HRMS_STAGING_UNGRANTED_DEPT_HEAD_EMAIL` and `HRMS_STAGING_UNGRANTED_DEPT_HEAD_PASSWORD` for a dedicated staging account with that role and no succession grant.
-- The remediation integration suite additionally requires dedicated fixture IDs: `HRMS_STAGING_ACK_ASSIGNMENT_ID` must be approved, unacknowledged, assigned to `employee@priorityhandling.demo`, and have a different evaluator; `HRMS_STAGING_PATCH_COURSE_ID` must be editable; `HRMS_STAGING_COURSE_APPROVE_ID` and `HRMS_STAGING_COURSE_RETURN_ID` must each be draft, have at least one section, be created by the Operations Manager demo account, and be safe to submit/review; `HRMS_STAGING_COURSE_SELF_APPROVAL_ID` must be a draft with at least one section and owned by `hr@priorityhandling.demo`. These records are mutated. Recreate/reset the fixtures in staging before rerunning; do not use production records.
+- The remediation integration suite additionally requires dedicated fixture IDs: `HRMS_STAGING_ACK_ASSIGNMENT_ID` must be approved, unacknowledged, assigned to `ana.employee+priority@gmail.com`, and have a different evaluator; `HRMS_STAGING_PATCH_COURSE_ID` must be editable; `HRMS_STAGING_COURSE_APPROVE_ID` and `HRMS_STAGING_COURSE_RETURN_ID` must each be draft, have at least one section, be created by the Operations Manager seed account, and be safe to submit/review; `HRMS_STAGING_COURSE_SELF_APPROVAL_ID` must be a draft with at least one section and owned by `liza.hradmin+priority@gmail.com`. These records are mutated. Recreate/reset the fixtures in staging before rerunning; do not use production records.
 
 ## Backup and restore
 

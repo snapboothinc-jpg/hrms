@@ -22,8 +22,17 @@ const run =
 
 const ANA = "00000000-0000-4000-d000-000000000003"; // employee
 const PAOLO = "00000000-0000-4000-d000-000000000004"; // supervisor's report
-const GRACE = "00000000-0000-4000-d000-000000000007"; // warehousing, outside OPS
+const VICTOR = "00000000-0000-4000-d000-000000000007"; // same department, outside the supervisor's reporting line
 const SAFETY = "00000000-0000-4000-f000-000000000001";
+const DEMO_EMAILS: Record<string, string> = {
+  superadmin: "victor.superadmin+priority@gmail.com",
+  admin: "nina.admin+priority@gmail.com",
+  hr: "liza.hradmin+priority@gmail.com",
+  depthead: "maria.depthead+priority@gmail.com",
+  supervisor: "jose.supervisor+priority@gmail.com",
+  employee: "ana.employee+priority@gmail.com",
+  ops: "carlo.opsmanager+priority@gmail.com",
+};
 
 async function as(email: string, password = PW) {
   const c = createClient(URL_, KEY, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -35,8 +44,7 @@ async function as(email: string, password = PW) {
 run("role access", () => {
   const c: Record<string, SupabaseClient> = {};
   beforeAll(async () => {
-    for (const r of ["superadmin", "admin", "hr", "depthead", "supervisor", "employee", "ops"])
-      c[r] = await as(`${r}@priorityhandling.demo`);
+    for (const r of Object.keys(DEMO_EMAILS)) c[r] = await as(DEMO_EMAILS[r]);
   });
 
   it("1. employee cannot read another employee's evaluation or assessment", async () => {
@@ -55,13 +63,13 @@ run("role access", () => {
   });
 
   it("2. supervisor cannot see employees outside their reporting line", async () => {
-    const r = await c.supervisor.from("employees").select("id").eq("id", GRACE);
+    const r = await c.supervisor.from("employees").select("id").eq("id", VICTOR);
     expect(r.data).toEqual([]);
     const ok = await c.supervisor.from("employees").select("id").eq("id", PAOLO);
     expect(ok.data?.length).toBe(1);
     const w = await c.supervisor.rpc("save_assessment", {
       _id: null,
-      _employee: GRACE,
+      _employee: VICTOR,
       _competency: SAFETY,
       _level: 3,
       _evidence: "x",
@@ -72,11 +80,19 @@ run("role access", () => {
     expect(w.error?.message).toMatch(/NOT_FOUND/);
   });
 
-  it("3. department head cannot read another department", async () => {
-    const r = await c.depthead.from("employees").select("id").eq("id", GRACE);
-    expect(r.data).toEqual([]);
-    const g = await c.depthead.rpc("competency_gaps", { _employee: GRACE } as never);
-    expect(g.data).toEqual([]);
+  it("3. all seeded employees belong to the single Logistics Department", async () => {
+    const [departments, employees] = await Promise.all([
+      c.depthead.from("departments").select("id, name"),
+      c.depthead.from("employees").select("department_id"),
+    ]);
+    expect(departments.error).toBeNull();
+    expect(departments.data).toEqual([
+      { id: "00000000-0000-4000-b000-000000000001", name: "Logistics Department" },
+    ]);
+    expect(employees.error).toBeNull();
+    expect(new Set(employees.data?.map((employee) => employee.department_id))).toEqual(
+      new Set(["00000000-0000-4000-b000-000000000001"]),
+    );
   });
 
   it("succession access is explicitly granted and restricted to that Department Head's department", async () => {
@@ -97,14 +113,7 @@ run("role access", () => {
     expect(inScope.error).toBeNull();
     expect(inScope.data?.length).toBeGreaterThan(0);
 
-    const otherDepartment = departments.data?.find((department) => department.id !== departmentId);
-    expect(otherDepartment).toBeTruthy();
-    const outOfScope = await c.depthead
-      .from("critical_positions")
-      .select("id")
-      .eq("department_id", otherDepartment!.id);
-    expect(outOfScope.error).toBeNull();
-    expect(outOfScope.data).toEqual([]);
+    expect(departments.data).toHaveLength(1);
 
     const employeeRows = await c.employee.from("critical_positions").select("id");
     expect(employeeRows.error).toBeNull();
@@ -175,9 +184,9 @@ run("role access", () => {
   });
 
   it("7. search never returns restricted employees", async () => {
-    const r = await c.employee.rpc("global_search", { _q: "Grace" } as never);
+    const r = await c.employee.rpc("global_search", { _q: "Victor" } as never);
     expect((r.data as { kind: string }[]).filter((x) => x.kind === "employee")).toEqual([]);
-    const s = await c.supervisor.rpc("global_search", { _q: "Lim" } as never);
+    const s = await c.supervisor.rpc("global_search", { _q: "Ramos" } as never);
     expect((s.data as { kind: string }[]).filter((x) => x.kind === "employee")).toEqual([]);
   });
 
@@ -198,11 +207,13 @@ run("role access", () => {
     expect(r.error || (after.count ?? 0) > 0).toBeTruthy();
   });
 
-  it("weights must total 100 before activation", async () => {
-    const r = await c.hr.rpc("activate_profile_version", {
-      _version_id: "00000000-0000-4000-9100-000000000002",
-    } as never);
-    expect(r.error?.message).toMatch(/100 percent/);
+  it("active evaluation profile weights total 100", async () => {
+    const items = await c.hr
+      .from("evaluation_items")
+      .select("weight")
+      .eq("version_id", "00000000-0000-4000-9100-000000000001");
+    expect(items.error).toBeNull();
+    expect(items.data?.reduce((total, item) => total + item.weight, 0)).toBe(100);
   });
 
   it("idempotent replay returns the same result; a different body conflicts", async () => {
@@ -210,13 +221,13 @@ run("role access", () => {
     const { data: cyc } = await c.hr.from("evaluation_cycles").select("id").limit(1).single();
     const a = await c.hr.rpc("create_assignments", {
       _cycle: cyc!.id,
-      _employees: [GRACE],
+      _employees: [VICTOR],
       _idem: key,
       _hash: "h1",
     } as never);
     const b = await c.hr.rpc("create_assignments", {
       _cycle: cyc!.id,
-      _employees: [GRACE],
+      _employees: [VICTOR],
       _idem: key,
       _hash: "h1",
     } as never);

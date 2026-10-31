@@ -71,6 +71,69 @@
       "when": 1793401568892,
       "tag": "0009_phase3_approvals_qualification",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793401569892,
+      "tag": "0010_policy_and_foreign_key_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793401570892,
+      "tag": "0011_fix_linter_function_errors",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793401571892,
+      "tag": "0012_fix_demo_cleanup_ambiguous_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793401572892,
+      "tag": "0013_restrict_client_database_grants",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793401573892,
+      "tag": "0014_restrict_default_function_execute",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1793401574892,
+      "tag": "0015_bootstrap_initial_super_admin",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793401575892,
+      "tag": "0016_mark_demo_fixtures",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793401576892,
+      "tag": "0017_mark_demo_reporting_lines",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793401577892,
+      "tag": "0018_compact_demo_reset",
+      "breakpoints": true
     }
   ]
 }

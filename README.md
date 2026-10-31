@@ -564,16 +564,12 @@ variables, deployment operations, and safety requirements.
 4. Start the app:
 
    ```sh
-
+   npm run dev
    ```
 
-npm run dev
-
-````
-
-Open the local URL printed by Vite. `.env` is loaded for server-side runtime,
-migration, and seed commands; only `VITE_` variables are exposed to browser
-code.
+   Open the local URL printed by Vite. `.env` is loaded for server-side runtime,
+   migration, and seed commands; only `VITE_` variables are exposed to browser
+   code.
 
 Useful validation commands:
 
@@ -582,4 +578,4 @@ npm run typecheck
 npm test
 npm run lint
 npm run build
-````
+```

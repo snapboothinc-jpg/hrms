@@ -1,0 +1,18 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - paragraph [ref=e5]: Priority Handling Logistics, Inc.
+      - generic [ref=e6]:
+        - heading "Sign in" [level=1] [ref=e7]
+        - paragraph [ref=e8]: Use your work email and password.
+        - generic [ref=e9]:
+          - generic [ref=e10]:
+            - generic [ref=e11]: Email *
+            - textbox "Email *" [ref=e12]
+          - generic [ref=e13]:
+            - generic [ref=e14]: Password *
+            - textbox "Password *" [ref=e15]
+          - button "Sign in" [ref=e16] [cursor=pointer]
+      - group [ref=e17]:
+        - generic "Demo accounts" [ref=e18] [cursor=pointer]
+  - region "Notifications alt+T"

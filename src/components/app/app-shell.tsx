@@ -10,7 +10,6 @@ import {
   Search,
   Sun,
   X,
-  Truck,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -31,6 +30,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { GlobalSearch } from "./global-search";
 import { useTheme } from "@/hooks/use-theme";
+import { BrandLogo } from "./brand-logo";
 
 function Sidebar({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { set, me, role } = usePermissions();
@@ -62,7 +62,7 @@ function Sidebar({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: (
                       title={collapsed ? i.label : undefined}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex items-center gap-2.5 rounded-md px-2 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+                        "flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
                         active &&
                           "bg-sidebar-accent font-bold text-sidebar-accent-foreground shadow-[inset_3px_0_0_var(--color-sidebar-primary)]",
                         collapsed && "justify-center",
@@ -145,15 +145,15 @@ export function AppShell() {
           collapsed ? "w-16" : "w-64",
         )}
       >
-        <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
-          <span
-            className="grid size-8 place-items-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
-            aria-hidden
-          >
-            <Truck className="size-4" />
-          </span>
+        <div
+          className={cn(
+            "flex h-16 shrink-0 items-center gap-3 border-b border-sidebar-border px-4",
+            collapsed && "justify-center px-2",
+          )}
+        >
+          <BrandLogo className="size-10" decorative />
           {!collapsed && (
-            <span className="text-xs font-bold leading-tight tracking-tight text-sidebar-accent-foreground">
+            <span className="text-[13px] font-bold leading-tight tracking-tight text-sidebar-accent-foreground">
               Priority Handling
               <br />
               Logistics, Inc.
@@ -164,7 +164,7 @@ export function AppShell() {
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
-          className="flex items-center gap-2 border-t border-sidebar-border px-4 py-3 text-sm text-sidebar-foreground/80 hover:text-sidebar-accent-foreground"
+          className="flex min-h-11 items-center gap-2 border-t border-sidebar-border px-4 py-3 text-sm text-sidebar-foreground/80 transition-colors hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sidebar-ring"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
@@ -181,10 +181,15 @@ export function AppShell() {
         >
           <div className="absolute inset-0 bg-navy/60" onClick={() => setMobileOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-sidebar">
-            <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
-              <span className="text-sm font-bold leading-tight text-sidebar-accent-foreground">
-                Priority Handling Logistics, Inc.
-              </span>
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <BrandLogo className="size-10" decorative />
+                <span className="min-w-0 text-sm font-bold leading-tight text-sidebar-accent-foreground">
+                  Priority Handling
+                  <br />
+                  Logistics, Inc.
+                </span>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -201,7 +206,7 @@ export function AppShell() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-card/95 px-3 backdrop-blur sm:px-5">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b bg-card/95 px-3 backdrop-blur sm:gap-3 sm:px-5">
           <Button
             variant="ghost"
             size="icon"
@@ -234,7 +239,7 @@ export function AppShell() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2 px-2" aria-label="Account menu">
-                <span className="grid size-8 place-items-center rounded-full bg-primary font-bold text-primary-foreground">
+                <span className="grid size-9 place-items-center rounded-full bg-primary font-bold text-primary-foreground">
                   {(me?.employee?.name ?? me?.email ?? "?").slice(0, 1).toUpperCase()}
                 </span>
                 <span className="hidden text-left leading-tight lg:block">
@@ -266,7 +271,10 @@ export function AppShell() {
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
-        <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <main
+          id="main"
+          className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+        >
           {me && !me.role ? (
             <div className="surface p-6">
               <h1 className="text-title font-bold">No role assigned</h1>

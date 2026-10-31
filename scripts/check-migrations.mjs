@@ -8,8 +8,8 @@ const metaDir = join(migrationsDir, "meta");
 const entries = JSON.parse(await readFile(join(metaDir, "_journal.json"), "utf8")).entries;
 const files = (await readdir(migrationsDir)).filter((file) => file.endsWith(".sql")).sort();
 
-if (entries.length < 6 || entries.length > 10) {
-  throw new Error(`Expected 6–10 logical SQL migrations; found ${entries.length}`);
+if (entries.length < 6) {
+  throw new Error(`Expected at least 6 logical SQL migrations; found ${entries.length}`);
 }
 
 if (entries.length !== files.length) {
@@ -47,6 +47,57 @@ if (!/insert\s+into\s+auth\.users/i.test(seed))
   throw new Error("Demo seed must retain its auth fixtures");
 if (allSql.some((sql) => /insert\s+into\s+auth\.users/i.test(sql))) {
   throw new Error("Demo accounts must remain outside automatic schema migrations");
+}
+if (!/crypt\('Test1234!'/i.test(seed)) {
+  throw new Error("All demo accounts must use the standardized development password");
+}
+
+const accountsBlock = seed.match(
+  /select\s+\*\s+from\s+\(values([\s\S]*?)\)\s+as\s+accounts\(id,email,name,role\)/i,
+);
+if (!accountsBlock) throw new Error("Demo seed is missing its role account list");
+const accountRows = [
+  ...accountsBlock[1].matchAll(
+    /\('([0-9a-f-]+)'::uuid,'([^']+)','([^']+)','([^']+)'(?:::public\.app_role)?\)/gi,
+  ),
+];
+const roleAliases = new Map([
+  ["super_admin", "superadmin"],
+  ["admin", "admin"],
+  ["hr_admin", "hradmin"],
+  ["dept_head", "depthead"],
+  ["supervisor", "supervisor"],
+  ["employee", "employee"],
+  ["ops_manager", "opsmanager"],
+]);
+if (accountRows.length !== roleAliases.size) {
+  throw new Error(`Expected one account for each of ${roleAliases.size} system roles`);
+}
+const seenRoles = new Set();
+for (const [, , email, name, role] of accountRows) {
+  const [firstName, roleAlias] = email.split("@")[0].split("+")[0].split(".");
+  if (
+    !/^[a-z]+\.[a-z]+\+priority@gmail\.com$/i.test(email) ||
+    firstName !== name.split(/\s+/)[0].toLowerCase() ||
+    roleAlias !== roleAliases.get(role)
+  ) {
+    throw new Error(`Demo account does not match the first-name/role email format: ${email}`);
+  }
+  if (seenRoles.has(role)) throw new Error(`Duplicate demo account role: ${role}`);
+  seenRoles.add(role);
+}
+if ([...roleAliases.keys()].some((role) => !seenRoles.has(role))) {
+  throw new Error("Demo seed is missing a required system role");
+}
+const departmentBlock = seed.match(
+  /insert\s+into\s+public\.departments\([^;]+?\)\s+values([\s\S]*?);/i,
+);
+if (
+  !departmentBlock ||
+  !/Logistics Department/.test(departmentBlock[1]) ||
+  [...departmentBlock[1].matchAll(/\('[0-9a-f-]+','[^']+'/gi)].length !== 1
+) {
+  throw new Error("Demo seed must define exactly one Logistics Department");
 }
 
 const sql = allSql.join("\n");

@@ -42,14 +42,16 @@ export function PageHeader({
   eyebrow?: string;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {eyebrow && (
           <p className="font-data text-xs font-semibold uppercase tracking-wider text-accent-foreground">
             {eyebrow}
           </p>
         )}
-        <h1 className="text-title font-bold text-foreground">{title}</h1>
+        <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl">
+          {title}
+        </h1>
         {description && (
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{description}</p>
         )}
@@ -73,7 +75,7 @@ export function Panel({
   description?: string;
 }) {
   return (
-    <section className={cn("surface p-5", className)}>
+    <section className={cn("surface p-5 sm:p-6", className)}>
       {(title || actions) && (
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
@@ -108,7 +110,7 @@ export function StatCard({
     danger: "text-destructive bg-danger-soft",
   }[tone];
   return (
-    <div className="surface flex items-start gap-4 p-4">
+    <div className="surface flex items-start gap-4 p-4 sm:p-5">
       {Icon && (
         <span
           className={cn("grid size-10 shrink-0 place-items-center rounded-md", toneCls)}
@@ -361,7 +363,7 @@ export function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement
     <select
       {...props}
       className={cn(
-        "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
+        "flex h-10 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         props.className,
       )}
     />

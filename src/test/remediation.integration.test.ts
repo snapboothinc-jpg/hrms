@@ -45,10 +45,10 @@ stagingDescribe("HRMS remediation workflows (isolated staging only)", () => {
 
   beforeAll(async () => {
     [employee, supervisor, operations, hr] = await Promise.all([
-      login("employee@priorityhandling.demo"),
-      login("supervisor@priorityhandling.demo"),
-      login("ops@priorityhandling.demo"),
-      login("hr@priorityhandling.demo"),
+      login("ana.employee+priority@gmail.com"),
+      login("jose.supervisor+priority@gmail.com"),
+      login("carlo.opsmanager+priority@gmail.com"),
+      login("liza.hradmin+priority@gmail.com"),
     ]);
   });
 

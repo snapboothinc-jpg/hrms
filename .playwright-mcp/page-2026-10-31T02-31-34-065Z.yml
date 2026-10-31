@@ -1,0 +1,16 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: Priority HandlingLogistics, Inc.
+    - heading "Sign in" [level=2] [ref=e8]
+    - paragraph [ref=e9]: Accounts are created by your administrator.
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]: Email *
+        - textbox "Email *" [ref=e13]
+      - generic [ref=e14]:
+        - generic [ref=e15]: Password *
+        - textbox "Password *" [ref=e16]
+      - button "Sign in" [ref=e17] [cursor=pointer]
+    - group [ref=e18]:
+      - generic "Demo accounts" [ref=e19] [cursor=pointer]
+  - region "Notifications alt+T"
