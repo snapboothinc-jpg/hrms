@@ -1,0 +1,721 @@
+SYSTEM UI/UX
+SPECIFICATION
+Complete Sidebar, User Roles, Features,
+Page Layouts, Fields, Tables & Actions
+Design and Development of Performance and Development in Human Resource Management System
+for Freight and Logistics Companies with Gemini 2.5 Flash Competency Gap Analysis
+and Personalized Training Recommendations
+Prepared as a proposed functional and interface blueprint
+## Document purpose and scope
+This document defines a proposed navigation structure, role-based sidebar, page-by-page features, data fields, tables, forms, actions, approval boundaries, and shared interface conventions for the HRMS. It is intended to guide requirements validation, wireframing, database design, and implementation.
+The six core modules are Performance Management, Competency Management, Learning Management, Training Management, Succession Planning, and Social Recognition. Supporting pages cover employee/job setup, administration, AI recommendations, notifications, reports, and auditability.
+## Contents
+1. Global application layout and design conventions
+2. User roles and role-based sidebar menus
+3. Module 1 — Performance Management
+4. Module 2 — Competency Management
+5. Gemini 2.5 Flash integration and AI recommendation review
+6. Module 3 — Learning Management
+7. Module 4 — Training Management
+8. Module 5 — Succession Planning
+9. Module 6 — Social Recognition
+10. Administration and shared pages
+11. Reports and analytics
+12. Data relationships and cross-module workflow
+13. Permissions, audit, privacy, and exception handling
+14. Recommended implementation sequence
+15. Final validation checklist
+## 1. Global application layout and design conventions
+### 1.1 Standard shell
+- Area: Left sidebar; Required content / behavior: Role-specific navigation, expandable module menus, active-page indicator, collapsed mode where useful.
+- Area: Top bar; Required content / behavior: Page title or breadcrumbs, global search, notifications, help, profile menu.
+- Area: Main content; Required content / behavior: Page header, short description, primary action, summary cards, filters, tables/forms/charts.
+- Area: Detail panel/page; Required content / behavior: Record summary, related records, evidence, comments, history, allowed actions.
+- Area: Feedback states; Required content / behavior: Loading, empty, validation error, access denied, successful save, failed operation.
+- Area: Pagination; Required content / behavior: Record count, page controls, page size, sorting, and filter persistence where practical.
+- Area: Responsive behavior; Required content / behavior: Sidebar collapses on narrow screens; tables can scroll or switch to cards; forms remain usable.
+### 1.2 Common page structure
+Page header: title, breadcrumb, one-sentence purpose, and the main permitted action.
+Summary cards: counts relevant to the current role and data scope.
+Filter row: keyword search and relevant filters such as department, job title, review period, date, and status.
+Main content: data table, card list, chart, form, calendar, or matrix.
+Detail view: linked records, evidence, comments, status history, and audit metadata.
+Footer controls: pagination, record count, export where authorized, and last-updated information when useful.
+### 1.3 UI consistency standards
+- Component: Tables; Standard: Search, sort, pagination, filters, clear empty state, row-level actions.
+- Component: Forms; Standard: Labels, required indicators, field validation, helpful error messages, save draft where appropriate.
+- Component: Status badges; Standard: Use consistent labels and colors across modules; never rely on color alone.
+- Component: Ratings; Standard: Show the rating scale and definition; distinguish missing/unassessed from low ratings.
+- Component: AI recommendations; Standard: Show the source gap, rationale, suggested action, reviewer, decision, and timestamp.
+- Component: Charts; Standard: Show date range, population, labels, and a text/table alternative.
+- Component: Files; Standard: Show filename, type, uploader, date, and access restrictions.
+- Component: Audit trail; Standard: Record actor, action, record, timestamp, and before/after values where appropriate.
+- Component: Security; Standard: Enforce permissions on the server/API as well as hiding unauthorized sidebar links.
+## 2. User roles and role-based sidebar menus
+The system uses exactly seven account roles. Responsibilities previously assigned to HR Manager, Learning Content Manager, Senior Management, and HR Analyst / Report Viewer are retained as features and redistributed to the appropriate roles below.
+### 2.1 Retained roles and consolidated responsibilities
+- Role: Super Admin; Primary responsibility: Platform governance; Consolidated features / functions: Global roles and permissions; system-wide security and configuration; audit oversight; integration-level settings and recovery of administrative access. Does not automatically approve employee performance or succession decisions.
+- Role: Admin; Primary responsibility: Daily system administration; Consolidated features / functions: Create, edit, activate and deactivate accounts; link accounts to employee records; maintain organization structure, departments, positions and reporting lines; manage routine notifications, support and operational settings within assigned permissions.
+- Role: HR Administrator; Primary responsibility: HR operations and HR reporting; Consolidated features / functions: Maintain employee/job records; configure performance cycles and assignments; maintain competency frameworks and role requirements; review competency gaps; administer HR workflows and delegated approvals; maintain succession records; manage recognition approvals where assigned; access authorized HR reports and exports. Absorbs the former HR Manager responsibilities.
+- Role: Department Head; Primary responsibility: Department oversight and delegated decisions; Consolidated features / functions: View department-level performance, competency, learning and training dashboards; review skill gaps and workforce development coverage; provide input on critical roles and succession plans; complete delegated approvals; access authorized department reports. Absorbs the relevant Senior Management oversight functions.
+- Role: Supervisor; Primary responsibility: Direct team management; Consolidated features / functions: Complete performance reviews; assess competencies and validate evidence; review team gaps; identify development needs; monitor learning and training progress; collaborate on recommendation review where authorized; nominate or review recognition under the configured workflow; access team-level reports.
+- Role: Employee; Primary responsibility: Self-service; Consolidated features / functions: View and update permitted profile fields; complete self-evaluations; view own performance history and competency gaps; view reviewed development recommendations; access the learning center and assigned courses; view training schedule, attendance and results; manage development goals; participate in social recognition.
+- Role: Operations Manager (Training & Development Officer); Primary responsibility: Learning content, development plans and training delivery; Consolidated features / functions: Own course catalog and learning materials; create and maintain courses and learning paths; map learning content to competencies; manage quizzes and assessments; publish content under the configured approval route; review Gemini recommendations; create and track development plans; schedule training; manage trainers, attendance and results; coordinate reassessment and training effectiveness; produce learning/training reports. Absorbs Learning Content Manager functions.
+### 2.2 Role-based sidebar menus
+- Role: Super Admin; Sidebar menu items: System Overview; Global Roles & Permissions; Security & Audit; System-wide Configuration; Integration Settings; My Profile.
+- Role: Admin; Sidebar menu items: Dashboard; User Management; Organization Setup; Operational Configuration; Notifications; Support & System Status; My Profile.
+- Role: HR Administrator; Sidebar menu items: Dashboard; Employee Management; Performance Management; Competency Management; Succession Planning; Social Recognition; HR Reports & Analytics; Approval Center; Notifications; My Profile.
+- Role: Department Head; Sidebar menu items: Department Dashboard; Department Performance; Competency & Gap Overview; Learning & Training Overview; Succession Planning; Recognition Overview; Department Reports; Delegated Approvals; Notifications; My Profile.
+- Role: Supervisor; Sidebar menu items: Dashboard; My Team; Performance Management; Competency Management; Development Follow-up; AI Recommendations (review only, if authorized); Learning & Training Progress; Social Recognition; Team Reports; Notifications; My Profile.
+- Role: Employee; Sidebar menu items: My Dashboard; My Profile; My Performance; My Competencies; My Development Plan; Learning Center; My Training; Social Recognition; My Career Development; Notifications; Help & Support.
+- Role: Operations Manager (Training & Development Officer); Sidebar menu items: Dashboard; Competency Gaps; AI Recommendations; Development Plans; Course & Learning Content Management; Learning Paths; Quiz & Assessment Management; Learner Progress; Training Calendar; Training Sessions & Attendance; Assessment & Reassessment; Training Effectiveness; Learning & Training Reports; Notifications; My Profile.
+### 2.3 Role-to-module access summary
+- Role: Super Admin; Primary access: System-wide administration and security governance; Restrictions / safeguards: No automatic business approval rights; access to sensitive HR records must be separately granted and logged.
+- Role: Admin; Primary access: Accounts, organization structure, routine configuration and support; Restrictions / safeguards: Do not grant broad performance, succession or confidential employee-record access solely because of administrative duties.
+- Role: HR Administrator; Primary access: HR records, HR modules, authorized HR reports and approvals; Restrictions / safeguards: Sensitive records and approvals follow assigned scope and company policy.
+- Role: Department Head; Primary access: Department dashboards, succession input and delegated approvals; Restrictions / safeguards: Default scope is the assigned department; detailed employee records require explicit authorization.
+- Role: Supervisor; Primary access: Assigned team performance, competency, development and recognition; Restrictions / safeguards: Cannot access unrelated teams or confidential succession comparisons by default.
+- Role: Employee; Primary access: Own profile, performance, competency, learning, training and recognition; Restrictions / safeguards: Cannot view another employee's confidential reviews or restricted succession information.
+- Role: Operations Manager (Training & Development Officer); Primary access: Learning content, training plans/sessions, AI recommendation review, reassessment and learning/training reports; Restrictions / safeguards: Access only to employee details needed for learning and development; no broad HR case access by default.
+## 3. Module 1 — Performance Management
+Purpose: provide a standardized performance-management process while allowing the actual evaluation content to vary according to the employee’s department, job position, responsibilities, KPIs, competencies, and applicable safety or qualification requirements. The module incorporates the client’s existing appraisal process as the practical baseline and extends it into a configurable, evidence-based performance and development workflow.
+Design principle: standardize the process, not the content. Every employee follows the same evaluation lifecycle, rating methodology, evidence structure, review workflow, and development follow-up, while the criteria presented on the evaluation form are generated from the approved evaluation profile for the employee’s job position.
+### 3.1 Client Process Integration
+The client’s current non-supervisory performance evaluation form is retained as the real-world baseline rather than copied as a universal checklist. Its established process includes a 1–5 rating scale, evaluator/reviewer roles, employee acknowledgement, performance factors, strengths and weaknesses, development recommendations, advancement/development considerations, and an overall recommendation.
+The ten client performance factors are retained as source concepts and are decomposed into common organizational criteria, position-specific performance indicators, and/or job-specific competencies as appropriate.
+- Client factor: Quality of Work; Treatment in proposed HRMS: Retain as a common concept, but define observable quality indicators according to the position.
+- Client factor: Quantity of Work; Treatment in proposed HRMS: Convert to position-specific productivity/output indicators where measurable.
+- Client factor: Job Knowledge; Treatment in proposed HRMS: Map to job-specific technical knowledge and competencies.
+- Client factor: Ability to Learn; Treatment in proposed HRMS: Retain as a development/learning-related behavioral criterion; do not use it as a substitute for job competency.
+- Client factor: Dependability; Treatment in proposed HRMS: Retain as a common behavioral criterion covering reliability, attendance/punctuality, and responsibility.
+- Client factor: Initiative; Treatment in proposed HRMS: Retain as a common behavioral competency with role-appropriate examples.
+- Client factor: Human Relations/Teamwork; Treatment in proposed HRMS: Retain as a common organizational competency; indicators vary by work context.
+- Client factor: Cost Consciousness; Treatment in proposed HRMS: Apply where relevant to the position, such as driving, fleet, warehouse, procurement, and operations.
+- Client factor: Discipline; Treatment in proposed HRMS: Retain as a common compliance/behavior criterion.
+- Client factor: Safety Consciousness/Care of Equipment; Treatment in proposed HRMS: Retain as a common principle but make the detailed indicators and criticality position-specific; treat safety-critical requirements separately from the overall average.
+### 3.2 Common Evaluation Framework
+The evaluation engine uses four layers. The first and fourth layers are standardized for all employees; the middle layers are configured according to the position.
+- Layer: A. Employee and process context; Standardized components: Employee ID, department, job title, supervisor, cycle, evaluator, dates, workflow, acknowledgement; Position-specific components: Employee/job values and reporting relationship
+- Layer: B. Core organizational performance; Standardized components: Common behavioral/organizational criteria such as dependability, teamwork, communication, initiative, discipline, professionalism, and applicable safety awareness; Position-specific components: Exact observable indicators and applicability may vary by role
+- Layer: C. Job performance and competency; Standardized components: Common data structure, 1–5 rating method, evidence fields, comments, approval workflow; Position-specific components: KPIs, responsibilities, technical criteria, competencies, required levels, weights, evidence methods, mandatory/safety-critical requirements
+- Layer: D. Development outcome; Standardized components: Strengths, development needs, employee comments, supervisor comments, development goals, acknowledgement, audit history; Position-specific components: Specific development actions, target competencies, learning/training activities, verification criteria, target dates
+### 3.3 Standardized vs Position-Specific Evaluation Components
+- Component: Evaluation cycle/workflow; Standardized across system: Yes; Position-specific: No
+- Component: Rating scale and rating definitions; Standardized across system: Yes; Position-specific: No
+- Component: Self-evaluation and supervisor review; Standardized across system: Yes; Position-specific: No
+- Component: Evidence/comments/history/audit; Standardized across system: Yes; Position-specific: No
+- Component: Strengths and development needs; Standardized across system: Yes; Position-specific: No
+- Component: Overall result structure; Standardized across system: Yes; Position-specific: No
+- Component: Job responsibilities; Standardized across system: No; Position-specific: Yes
+- Component: KPIs/performance indicators; Standardized across system: Framework standardized; content varies; Position-specific: Yes
+- Component: Technical competencies; Standardized across system: No; Position-specific: Yes
+- Component: Required competency levels; Standardized across system: No; Position-specific: Yes
+- Component: Criterion weights; Standardized across system: Configuration rule; Position-specific: Yes
+- Component: Evidence requirements; Standardized across system: Common field structure; Position-specific: Yes
+- Component: Mandatory qualifications; Standardized across system: Common tracking structure; Position-specific: Yes
+- Component: Safety-critical requirements; Standardized across system: Common control structure; Position-specific: Yes
+- Component: Development activities; Standardized across system: Common workflow; Position-specific: Specific to identified gaps
+- Component: AI recommendation process; Standardized across system: Yes; Position-specific: Inputs are position-specific
+### 3.4 Evaluation Item Types
+- Item type: Core/organizational criterion; Question answered: How does the employee demonstrate expected workplace behavior?; Examples: Dependability, teamwork, initiative, discipline, communication
+- Item type: Job performance/KPI criterion; Question answered: What results or outputs did the employee achieve?; Examples: On-time delivery, picking accuracy, HR transaction accuracy, documentation turnaround
+- Item type: Competency criterion; Question answered: What capability does the employee demonstrate while performing the job?; Examples: Defensive driving, inventory management, HR policy application, fleet maintenance knowledge
+- Item type: Critical requirement; Question answered: Is a mandatory safety, license, certification, or qualification requirement satisfied?; Examples: Driver license validity, safety qualification, mandatory equipment certification
+Performance criteria and competencies must not be treated as identical. A KPI measures an outcome or result; a competency describes the capability demonstrated to achieve work outcomes. A high overall performance score does not automatically eliminate a critical competency or qualification gap.
+### 3.5 Position Evaluation Profile and Dynamic Template
+The system should use one configurable evaluation engine rather than hard-coded forms for every job. Each approved job position has an Evaluation Profile that determines which common criteria, position-specific criteria, competencies, KPIs, weights, rating descriptors, evidence methods, and critical requirements appear on the employee’s evaluation form.
+- Evaluation Profile field: Profile ID/version; Purpose: Controls configuration and historical reproducibility.
+- Evaluation Profile field: Job position/department; Purpose: Determines the employee population to which the profile applies.
+- Evaluation Profile field: Common criteria; Purpose: Selects applicable organizational criteria.
+- Evaluation Profile field: Position-specific criteria/KPIs; Purpose: Defines measurable results and responsibilities for the position.
+- Evaluation Profile field: Required competencies; Purpose: Links the position to competency requirements.
+- Evaluation Profile field: Required competency level; Purpose: Defines target proficiency for each competency.
+- Evaluation Profile field: Criterion weight; Purpose: Defines relative importance when weighted scoring is approved.
+- Evaluation Profile field: Rating descriptors; Purpose: Defines observable meaning for 1–5 ratings.
+- Evaluation Profile field: Evidence method; Purpose: Defines acceptable evidence such as KPI record, observation, document, certificate, or practical assessment.
+- Evaluation Profile field: Mandatory/safety-critical flag; Purpose: Prevents critical requirements from being hidden by an overall average.
+- Evaluation Profile field: Effective date/approval; Purpose: Controls when the profile becomes active and preserves history.
+Evaluation templates are therefore configurations of the same system component. The system should not create separate software logic for Driver, Warehouse Operator, HR Staff, Fleet Coordinator, or other jobs; it should load the appropriate approved profile when the employee’s position is known.
+### 3.6 Position Evaluation Matrix
+The following matrix is a proposed design example for validation with the partner company. It is not a claim that these are the client’s final KPIs. Actual responsibilities, measures, weights, and competencies must be confirmed against approved job descriptions and company policy.
+- Position example: Driver; Common criteria: Dependability; teamwork; communication; initiative; discipline; Position-specific performance/KPIs: On-time delivery; trip/delivery completion; documentation accuracy; vehicle care; route compliance; safety performance; Key competencies / critical requirements: Defensive driving; route/time management; vehicle inspection; transport documentation; customer interaction; valid required license/qualifications
+- Position example: Warehouse Operator; Common criteria: Dependability; teamwork; communication; initiative; discipline; Position-specific performance/KPIs: Picking/packing accuracy; inventory accuracy; productivity; damage control; order processing; safe handling; Key competencies / critical requirements: Inventory handling; material handling; equipment operation; warehouse safety; procedure compliance
+- Position example: Fleet Coordinator; Common criteria: Dependability; teamwork; communication; initiative; discipline; Position-specific performance/KPIs: Preventive-maintenance coordination; vehicle availability; repair turnaround; record accuracy; compliance follow-up; Key competencies / critical requirements: Fleet maintenance knowledge; scheduling; documentation; vendor coordination; compliance management
+- Position example: HR Staff; Common criteria: Dependability; teamwork; communication; initiative; discipline; Position-specific performance/KPIs: HR transaction accuracy; response/turnaround time; record completeness; recruitment/process outputs; policy compliance; Key competencies / critical requirements: HR policy application; confidentiality; HR systems knowledge; documentation accuracy; employee service
+- Position example: Documentation/Forwarding Staff; Common criteria: Dependability; teamwork; communication; initiative; discipline; Position-specific performance/KPIs: Document accuracy; processing turnaround; shipment file completeness; exception handling; compliance checks; Key competencies / critical requirements: Shipping/documentation knowledge; attention to detail; customs/forwarding process knowledge where applicable
+- Position example: Customer Service Staff; Common criteria: Dependability; teamwork; communication; initiative; discipline; Position-specific performance/KPIs: Response time; case resolution; customer satisfaction indicators; record accuracy; escalation handling; Key competencies / critical requirements: Customer service; communication; problem solving; product/service knowledge; complaint handling
+- Position example: Supervisor/Manager; Common criteria: Leadership; communication; dependability; initiative; discipline; Position-specific performance/KPIs: Team target achievement; review completion; workforce coverage; operational/service outcomes; development follow-up; Key competencies / critical requirements: Leadership; coaching; decision-making; performance management; competency assessment; risk/compliance oversight
+### 3.7 Rating Scale and Scoring
+The client’s 1–5 rating scale is retained as the common organizational scale. The labels should be accompanied by observable definitions so that a rating represents performance against the configured criterion rather than a subjective impression alone.
+- Rating: 5; Standard interpretation: Excellent / consistently exceeds expectations; System requirement: Evidence shows sustained performance materially above the defined expectation.
+- Rating: 4; Standard interpretation: Above Average / often exceeds expectations; System requirement: Evidence shows performance above the normal requirement with consistency.
+- Rating: 3; Standard interpretation: Average / meets expectations; System requirement: Performance meets the defined requirement at the expected level.
+- Rating: 2; Standard interpretation: Below Average / improvement required; System requirement: Performance falls below the expected level and requires follow-up.
+- Rating: 1; Standard interpretation: Poor / unacceptable; System requirement: Performance is substantially below the requirement or repeatedly fails the defined standard.
+If weighted scoring is formally configured, the normalized performance score is calculated as: Final Score = Σ(Rating × Weight) / Σ(Weight). Weights must sum to 100% for a fully configured template. The system must retain the individual criterion ratings and evidence; the overall score is a summary, not a replacement for criterion-level review.
+Do not compare raw criterion scores across unrelated positions. Cross-position reporting should compare only equivalent or clearly mapped criteria/scales, while position-level reports may use the complete position-specific profile.
+### 3.8 Critical Safety and Qualification Controls
+Safety-critical competencies and mandatory qualifications are controlled separately from the overall performance average. A strong overall score must not conceal failure of a mandatory requirement. The system should display the overall performance result together with a separate critical-requirement status.
+- Example: Driver safety/license; Performance score behavior: Safety indicators contribute to the configured score; Critical requirement behavior: Expired/missing mandatory license or critical safety qualification is separately flagged and may restrict affected duties according to company rules/law.
+- Example: Warehouse equipment certification; Performance score behavior: Safe handling may be scored as a criterion; Critical requirement behavior: Required certification is tracked separately and must be current where applicable.
+- Example: General office/HR role; Performance score behavior: Safety awareness may be an organizational criterion if applicable; Critical requirement behavior: Technical safety qualifications are not forced onto the role unless required.
+### 3.9 Evaluation Form Page Layout
+The Evaluation Form page should be dynamic but visually consistent. The header identifies the employee, department, job position, supervisor, evaluator, cycle, due date, profile version, and status. The body is divided into common criteria, position-specific performance/KPIs, competencies, critical requirements, evidence, and development.
+- Section: A. Employee & job context; Fields / behavior: Employee, ID, department, job title, supervisor, cycle, evaluator, profile/version, dates; Required controls: Read-only job context for ordinary evaluators; record-level access control
+- Section: B. Common criteria; Fields / behavior: Criterion, definition, 1–5 rating, comments, evidence; Required controls: Show rating definitions; support self and supervisor ratings separately
+- Section: C. Position-specific performance; Fields / behavior: KPI/criterion, target/definition, rating, evidence, comments, weight where configured; Required controls: Show only criteria active for the employee’s position
+- Section: D. Competencies; Fields / behavior: Competency, required level, current/assessed level, evidence, assessor, method; Required controls: Link to Competency Management; distinguish unassessed from low level
+- Section: E. Critical requirements; Fields / behavior: Qualification/certificate, status, expiry, evidence, safety-critical flag; Required controls: Track separately from average; flag action when required
+- Section: F. Development outcome; Fields / behavior: Strengths, development needs, employee goals, supervisor recommendations, next steps; Required controls: Create link to development plan and AI recommendation workflow
+- Section: G. Review and acknowledgement; Fields / behavior: Self vs supervisor comparison, comments, decision, acknowledgement, approval history; Required controls: Record timestamps, reviewers, revisions, reasons for reopening
+### 3.10 Driver Evaluation Example
+The Driver example below is illustrative and should be validated with the client’s actual Driver job description, operating procedures, dispatch records, safety rules, and measurable KPIs.
+- Category: Safety & Compliance; Example weight: 30%; Example indicators: Defensive driving; traffic/company safety compliance; inspection compliance; incident performance; Evidence: Safety records, inspection records, incident reports, supervisor observation
+- Category: Delivery/Operational Performance; Example weight: 25%; Example indicators: On-time delivery; assigned trip completion; route compliance; appropriate delay handling; Evidence: Dispatch records, delivery records, route records
+- Category: Vehicle & Equipment Care; Example weight: 10%; Example indicators: Pre/post-trip checks; defect reporting; proper vehicle handling; preventable damage control; Evidence: Inspection history, maintenance reports, supervisor evidence
+- Category: Documentation & Accuracy; Example weight: 10%; Example indicators: Complete and accurate delivery documents; timely submission; accurate incident reporting; Evidence: Delivery documents, records, exception reports
+- Category: Dependability; Example weight: 10%; Example indicators: Attendance, punctuality, readiness, completion of assigned responsibilities; Evidence: Attendance and assignment records
+- Category: Customer Service & Communication; Example weight: 5%; Example indicators: Professional customer interaction; communication with dispatch; appropriate issue escalation; Evidence: Supervisor evidence, service records where available
+- Category: Teamwork & Professionalism; Example weight: 5%; Example indicators: Cooperation with dispatch/warehouse/operations; respectful conduct; Evidence: Supervisor/peer evidence where policy allows
+- Category: Initiative / Problem Solving; Example weight: 5%; Example indicators: Prompt reporting of problems; appropriate response to route/delivery issues; escalation within authority; Evidence: Incident examples, supervisor evidence
+Illustrative Driver result: if criterion ratings and approved weights produce a 4.20/5 weighted result, the system may display “Overall Performance: 4.20/5 – Above Average,” while separately displaying safety/qualification status. The exact thresholds and wording remain configurable and require client validation.
+- Driver criterion: Safe & Defensive Driving; Weight: 15%; Illustrative rating: 4; Illustrative evidence: Safety observations/records
+- Driver criterion: Safety Procedure Compliance; Weight: 15%; Illustrative rating: 5; Illustrative evidence: Inspection/compliance records
+- Driver criterion: On-Time Delivery; Weight: 15%; Illustrative rating: 4; Illustrative evidence: Dispatch/delivery records
+- Driver criterion: Delivery Completion; Weight: 10%; Illustrative rating: 4; Illustrative evidence: Trip/delivery records
+- Driver criterion: Vehicle Care; Weight: 10%; Illustrative rating: 4; Illustrative evidence: Inspection/maintenance evidence
+- Driver criterion: Documentation Accuracy; Weight: 10%; Illustrative rating: 5; Illustrative evidence: Delivery documents
+- Driver criterion: Dependability; Weight: 10%; Illustrative rating: 4; Illustrative evidence: Attendance/assignment records
+- Driver criterion: Customer Communication; Weight: 5%; Illustrative rating: 4; Illustrative evidence: Supervisor/service evidence
+- Driver criterion: Teamwork; Weight: 5%; Illustrative rating: 4; Illustrative evidence: Supervisor evidence
+- Driver criterion: Initiative; Weight: 5%; Illustrative rating: 3; Illustrative evidence: Incident/problem-solving examples
+### 3.11 Performance Evaluation to Competency Management
+Performance evaluation and competency management are related but distinct. Performance evaluation asks how well the employee performed during the review period; competency management asks whether the employee possesses the capability required by the position. A high performance score does not automatically mean that every required competency is at the target level.
+- Example: Driver with strong delivery results but weak defensive driving; Performance result: Overall may be high; Competency result: Required Level 4; Current Level 2; Gap 2; System action: Flag safety competency gap; require appropriate human review and development action.
+- Example: Warehouse employee completes tasks quickly but has poor handling competency; Performance result: Productivity may be high; Competency result: Required Level 3; Current Level 1; System action: Do not close gap based on productivity; assess and address the competency.
+- Example: HR staff demonstrates strong policy knowledge but misses HR deadlines; Performance result: Competency may be adequate; Competency result: Required Level 4; Current Level 4; System action: Address performance/process issue through feedback and development rather than inventing a competency gap.
+For comparable numeric competency levels, the existing Competency Management rule applies: Gap = max(0, Required Level − Current Level). Missing current ratings remain unassessed, and mandatory qualification issues are tracked separately.
+### 3.12 Performance → Competency → Gemini → Development Workflow
+The integrated performance-development cycle is:
+1. Maintain the approved job description, responsibilities, KPIs, required competencies, target levels, evidence methods, and mandatory qualifications for the position.
+2. HR opens an evaluation cycle and assigns self-evaluation and supervisor review according to policy.
+3. The system loads the employee’s approved position Evaluation Profile and displays common plus position-specific criteria.
+4. Employee completes self-evaluation where enabled; supervisor completes the authorized evaluation using evidence.
+5. The system calculates criterion and overall performance results where weights are configured.
+6. Supervisor or qualified assessor validates relevant competencies against the position requirements.
+7. The system calculates competency gaps and separately flags missing or mandatory qualifications.
+8. Validated, authorized performance/development evidence and competency gaps become inputs to Gemini 2.5 Flash.
+9. Gemini proposes gap-linked learning/training recommendations with rationale, target competency, activity, and verification method.
+10. Supervisor and/or Operations Manager (Training & Development Officer) reviews, edits, accepts, or rejects the recommendation.
+11. Accepted recommendations become development plans and learning/training assignments.
+12. Learning Management records learning and knowledge checks; Training Management records practical training, attendance, and results.
+13. The defined competency assessment method is repeated after development.
+14. The system updates the gap based on evidence. Training completion alone does not close a competency gap.
+15. Unresolved gaps receive further development actions, reassessment, or escalation according to policy.
+### 3.13 Gemini Recommendation Input and Output Controls
+- Input to Gemini: Employee job/position requirements; Required control: Use approved role requirements only; minimize personal data; Expected structured output: Relevant competency/performance gap
+- Input to Gemini: Validated competency ratings and evidence; Required control: Do not send unvalidated or unauthorized ratings; Expected structured output: Rationale linked to evidence
+- Input to Gemini: Relevant development needs from evaluation; Required control: Use current review-period needs where relevant; Expected structured output: Target competency and target level
+- Input to Gemini: Completed learning/training history; Required control: Use to avoid redundant recommendations; Expected structured output: Proposed learning/training activity
+- Input to Gemini: Available mapped courses/resources; Required control: Validate that resources exist; Expected structured output: Mapped course/resource when available
+- Input to Gemini: Verification method; Required control: Require a way to determine whether the gap improved; Expected structured output: Reassessment/practical verification method
+Gemini is a recommendation service, not a human role. It must not invent performance data, create unsupported competency ratings, silently assign courses, or make disciplinary, promotion, or succession decisions. Human reviewers remain responsible for consequential HR decisions.
+### 3.14 Development Planning Outputs
+- Development plan field: Linked evaluation/gap; Purpose: Traceability from performance evidence to development need.
+- Development plan field: Current vs target competency; Purpose: Defines the capability gap being addressed.
+- Development plan field: Development objective; Purpose: States what improvement is expected.
+- Development plan field: Activities; Purpose: Courses, coaching, mentoring, supervised practice, job rotation, practical training, or other approved activities.
+- Development plan field: Owner/trainer; Purpose: Identifies responsibility for the action.
+- Development plan field: Target date; Purpose: Defines expected completion/review timing.
+- Development plan field: Success/verification criteria; Purpose: Defines how improvement will be demonstrated.
+- Development plan field: Reassessment date/result; Purpose: Determines whether the gap is resolved.
+- Development plan field: Status/history; Purpose: Preserves progress and auditability.
+Training completion is recorded as a learning/training outcome, while competency attainment is determined by the defined assessment method. A course may be completed while the related competency gap remains open.
+### 3.15 Reporting and Cross-Position Comparability
+The system should support organization-wide reporting without pretending that unrelated job criteria are directly comparable. Standardized reports should focus on common process measures and clearly mapped metrics. Position-level reports should preserve the context of the position-specific criteria.
+- Reporting level: Organization; Recommended metrics: Evaluation completion; overall rating distribution; common competency gaps; development-plan completion; training completion; reassessment outcomes.
+- Reporting level: Department; Recommended metrics: Evaluation completion; performance trends for comparable criteria; competency gaps by category; training needs; unresolved critical gaps.
+- Reporting level: Job position; Recommended metrics: Position-specific KPI/criterion results; required/current competency levels; gap patterns; development outcomes.
+- Reporting level: Employee; Recommended metrics: Criterion ratings, evidence, feedback, competency history, open gaps, development plan, training and reassessment history.
+Historical trend charts must compare equivalent or clearly mapped criteria and scales. A Driver “On-Time Delivery” result should not be treated as directly equivalent to an HR “Recruitment Turnaround” result merely because both use a 1–5 rating.
+### 3.16 Data Model Extensions for Dynamic Evaluation
+- Record: Evaluation Profile; Key relationships / fields: Profile ID/version; position; department; effective date; status; common criteria; position-specific criteria; competencies; weights; evidence rules; critical requirements; approval history.
+- Record: Evaluation Criterion; Key relationships / fields: Criterion ID; type (core/KPI/competency); name; definition; applicable positions; rating descriptors; weight; evidence method; mandatory/safety-critical flag; related competency.
+- Record: Performance KPI; Key relationships / fields: Position; KPI name; definition; target/threshold where measurable; evidence source; period; unit; weight; owner; effective date.
+- Record: Performance Evaluation; Key relationships / fields: Employee; cycle; profile/version; self ratings; supervisor ratings; evidence; weighted result; critical requirement status; strengths; development needs; comments; approval/acknowledgement; audit history.
+- Record: Competency Requirement; Key relationships / fields: Position; competency; required level; mandatory/safety-critical flag; qualification; evidence method; effective date; approver.
+- Record: Competency Assessment; Key relationships / fields: Employee; competency; required/current level; method; evidence; assessor; date; status; next assessment.
+- Record: Competency Gap; Key relationships / fields: Employee; position; competency; required/current level; gap; criticality; evidence; status; linked recommendation; linked development plan.
+- Record: AI Recommendation; Key relationships / fields: Gap; source evidence; model/version metadata where available; recommendation; rationale; mapped resource; verification method; reviewer; decision; timestamp.
+- Record: Development Plan; Key relationships / fields: Employee; linked gap; objective; activities; owner; dates; success criteria; status; approval; reassessment result.
+### 3.17 Performance Management Rules and Exceptions
+- Scenario: Employee and supervisor ratings differ; Required system behavior: Retain both ratings and comments; route for discussion/review according to policy; do not silently overwrite one rating.
+- Scenario: Evaluation profile changes after a cycle opens; Required system behavior: Do not silently change existing evaluations; preserve the profile version and audit the change.
+- Scenario: No KPI is available for a criterion; Required system behavior: Use an approved observable criterion/evidence method rather than inventing a numeric value.
+- Scenario: Missing evidence; Required system behavior: Allow return/request-evidence workflow; do not treat missing evidence as a low rating automatically.
+- Scenario: Safety-critical failure; Required system behavior: Flag separately from overall score and apply the company’s defined action/restriction rules.
+- Scenario: Training completed but reassessment fails; Required system behavior: Record completion but keep the competency gap unresolved; create further development/reassessment action.
+- Scenario: No suitable mapped learning resource; Required system behavior: Training Officer selects another approved intervention or requests content development; do not invent a course record.
+- Scenario: AI unavailable; Required system behavior: Allow authorized manual development planning or safe retry while preserving source data and status.
+- Scenario: Unauthorized access; Required system behavior: Deny access and record a security-relevant event according to policy.
+### 3.18 Performance Management Validation Checklist
+☐ Client’s 1–5 rating scale is retained and rating definitions are displayed.
+☐ Client performance factors are represented as common concepts, position-specific criteria, or competencies as appropriate.
+☐ One dynamic evaluation framework is used instead of separate hard-coded forms per job.
+☐ Each approved job position has an Evaluation Profile with effective version and approval status.
+☐ Common organizational criteria are separated from position-specific KPIs and competencies.
+☐ Job-specific competencies are linked to required proficiency levels.
+☐ Position-specific KPIs/criteria have definitions, evidence methods, and approved weights where applicable.
+☐ Safety-critical and mandatory qualification requirements are tracked separately from the overall score.
+☐ Self-evaluation and supervisor evaluation can be retained separately.
+☐ Criterion-level evidence, comments, history, and audit trail are retained.
+☐ Performance results feed validated competency assessment and gap analysis without conflating the two.
+☐ Gemini receives only validated, authorized, necessary information and returns structured gap-linked recommendations.
+☐ Human reviewers accept, edit, or reject AI recommendations before assignment.
+☐ Accepted recommendations can become development plans and learning/training assignments.
+☐ Training completion is not treated as proof of competency attainment.
+☐ Competency reassessment determines whether a gap is resolved.
+☐ Reports compare only equivalent or clearly mapped criteria/scales across positions.
+☐ Promotion, succession, disciplinary, and other consequential decisions are not made solely from AI output or an overall score.
+☐ Driver, Warehouse, Fleet, HR, Documentation/Forwarding, Customer Service, and management examples are validated against actual client job descriptions before implementation.
+## 4. Module 2 — Competency Management
+Purpose: define role requirements, assess demonstrated capability, record evidence, and identify competency gaps.
+#### 4.1 Competency Dashboard
+Purpose: Summarize assessments and open gaps.
+Data/layout:
+Cards: framework competencies, employees assessed, open gaps, priority gaps, gaps awaiting review, gaps resolved in period.
+Charts: gaps by department, levels by job, common gaps, gap closure trend.
+Table: employee, role, competency, required/current level, gap, assessor, status, last assessment.
+Actions: Open assessment; Review gap; Export matrix.
+#### 4.2 Competency Library
+Purpose: Maintain the master competency definitions.
+Data/layout:
+Columns: competency ID, name, category, description, applicable positions, evidence requirements, assessment method, criticality, status, updated date.
+Form: code/name, description, category, observable criteria, proficiency levels and definitions, assessment method, mandatory qualification flag, applicable roles, evidence rules, review date.
+Actions: Create; Edit; Deactivate; Review history.
+Rules/notes: Define each level in observable terms; avoid vague labels alone.
+#### 4.3 Job Competency Requirements
+Purpose: Map each position to required competencies.
+Data/layout:
+Columns: job code/title, department, competency, required level, mandatory flag, method, effective date, approval status.
+Form: position, competency, required level, safety-critical/mandatory flag, relevant qualification, evidence method, effective date, approver.
+Actions: Add requirement; Edit; Submit for approval; View history.
+Rules/notes: Approved job requirements are the reference for gap analysis.
+#### 4.4 Employee Competency Matrix
+Purpose: Compare current and required levels across a team.
+Data/layout:
+Rows: employees. Columns: competencies. Cell: current level / required level and status.
+Filters: department, role, employee, competency category.
+Cell detail: assessment evidence, assessor, date, previous results.
+Highlight mandatory gaps separately; distinguish unassessed from low ratings.
+Actions: Open cell detail; Filter; Export authorized matrix.
+#### 4.5 Competency Assessment Form
+Purpose: Record an assessment based on evidence.
+Data/layout:
+Fields: employee, role, competency, required level, assessed current level, method, evidence notes, assessor, date, certificate reference if relevant, next assessment date, status.
+Actions: Save draft; Submit; Request evidence; Confirm result; Schedule reassessment.
+#### 4.6 Competency Gap Analysis
+Purpose: Show differences between job requirements and validated current capability.
+Data/layout:
+Columns: employee, job, competency, required level, current level, gap, criticality, evidence, status, last assessed, actions.
+Gap calculation for comparable numeric levels: max(0, required level - current level).
+Missing current ratings remain unassessed; mandatory qualification issues are tracked separately.
+Actions: View evidence; Review; Request reassessment; Open AI recommendation.
+#### 4.7 Competency Detail & History
+Purpose: Display the full history for a competency assessment.
+Data/layout:
+Definition and level descriptions; required/current levels; evidence and assessor comments; prior assessments; linked training; AI suggestions and human decisions; reassessment dates and outcomes; current gap status.
+Actions: Edit if authorized; View history; Create follow-up.
+## 5. Gemini 2.5 Flash integration and AI recommendation review
+Gemini is an application service, not a human user role. The application should supply validated, authorized information and treat the model output as a recommendation requiring review.
+Collect the employee's relevant job requirements, validated competency ratings, supporting evidence, relevant performance development needs, completed learning, and available mapped courses.
+Validate required fields, rating definitions, data freshness, and course availability before sending the request.
+Send only the information needed for the recommendation; minimize personal data.
+Request a structured output that identifies the competency gap, recommendation, rationale, target competency, proposed learning activity, and verification method.
+Validate output structure and confirm that suggested courses or resources exist. Flag unsupported or unmapped recommendations.
+Display the result to the authorized Supervisor or Training Officer for review.
+Record accept/edit/reject decision, reviewer, reason where required, model/version metadata if available, and timestamp.
+Convert accepted recommendations into a development plan and link it to the originating gap.
+After learning/training, reassess the competency and update the gap status based on evidence.
+#### 5.1 AI Recommendations Queue
+Purpose: Review generated recommendations awaiting human action.
+Data/layout:
+Columns: recommendation ID, employee, job, competency gap, required/current level, generated date, suggested activity, mapped course, reviewer, status.
+Filters: department, competency, priority, status, reviewer, generated date.
+Actions: Open; Accept; Edit; Reject; Request more evidence; Regenerate where appropriate.
+Rules/notes: A recommendation should never silently become an assigned course or final HR decision.
+#### 5.2 AI Recommendation Detail
+Purpose: Explain how the suggestion relates to the gap.
+Data/layout:
+Source assessment and evidence; required/current level; gap; employee's relevant training history; model-generated recommendation and rationale; mapped course availability; proposed verification; reviewer comments; decision and audit timestamps.
+Actions: Accept; Edit and accept; Reject with reason; Request more evidence; Create development plan.
+Rules/notes: If no suitable course exists, state that no mapped course was found rather than inventing a course record.
+- Field: Competency; Illustrative example: Safe pallet handling
+- Field: Required level; Illustrative example: 3
+- Field: Current assessed level; Illustrative example: 1
+- Field: Gap; Illustrative example: 2 levels, if numeric scale is valid
+- Field: AI suggestion; Illustrative example: Safety learning, supervised practical training, reassessment
+- Field: Human reviewer; Illustrative example: Warehouse Supervisor / Training Officer
+- Field: Closure condition; Illustrative example: Meets the defined practical competency standard
+- Field: Final status; Illustrative example: Set after reassessment, not merely course completion
+### 5.3 AI safeguards
+AI does not invent performance data or assign unsubstantiated competency ratings.
+AI suggestions must map to an identified gap and, where possible, to real learning resources.
+Human reviewers decide whether recommendations are appropriate and feasible.
+Keep an audit trail of recommendation, decision, edits, and later outcomes.
+Do not use AI output alone to make disciplinary, promotion, or succession decisions.
+Apply access control, data minimization, retention rules, and company privacy requirements.
+## 6. Module 3 — Learning Management
+Purpose: manage courses and learning materials, deliver learning, and track progress and knowledge checks.
+#### 6.1 Learning Dashboard
+Purpose: Show learning tasks for the current user or authorized learner population.
+Data/layout:
+Cards: assigned courses, in progress, completed, overdue, upcoming deadlines.
+Sections: continue learning, assigned paths, required safety/compliance learning, quiz results, approved recommendations, reminders.
+Actions: Continue course; Open assignment; View progress.
+#### 6.2 Course Catalog
+Purpose: Allow users to find available learning resources.
+Data/layout:
+Card/table: course title/code, description, category, target roles, competencies, duration, format, prerequisites, required/optional, version, availability.
+Filters: keyword, category, competency, job role, format, required status.
+Actions: View details; Enroll or request assignment if enabled.
+#### 6.3 Course Detail & Learning Player
+Purpose: Present course information and learning activities.
+Data/layout:
+Course objectives, competencies, audience, prerequisites, duration, modules, lessons, materials, assessment requirements, completion criteria.
+Player: lesson navigation, video/document/text, progress, quiz, save/resume, completion state.
+Actions: Start; Resume; Submit quiz; Mark activity complete when criteria are met.
+#### 6.4 Course Management
+Purpose: Create and maintain courses.
+Data/layout:
+Columns: course ID, title, category, mapped competencies, version, author, reviewer, status, last updated.
+Form: title, description, objectives, audience, competencies, lessons/materials, quiz, pass threshold, completion criteria, prerequisites, review date, version notes.
+Actions: Create; Edit; Preview; Submit for review; Publish; Revise; Archive.
+#### 6.5 Learning Paths
+Purpose: Group learning activities for a role or development goal.
+Data/layout:
+Columns: path name, target role, competencies, activities, prerequisites, duration, version, status.
+Detail: sequence, required/optional activities, course links, completion rules, competency goals, review date.
+Actions: Create path; Edit sequence; Publish; Archive.
+#### 6.6 Learner Progress
+Purpose: Track assigned learning.
+Data/layout:
+Columns: employee, course, assigned date, due date, progress, assessment result, completion date, status.
+Filters: course, department, role, status, due date.
+Actions: View history; Send reminder; Inspect results when authorized.
+#### 6.7 Assessment & Quiz Management
+Purpose: Configure knowledge checks and review results.
+Data/layout:
+Fields: quiz, course, questions, options, correct answers, points, pass threshold, attempt limit, feedback, active status.
+Results: employee, assessment, attempt, score, pass/fail, date, review status.
+Actions: Create/edit quiz; Preview; Publish; Review results.
+Rules/notes: An online quiz alone may not verify practical or safety-critical competency.
+## 7. Module 4 — Training Management
+Purpose: coordinate development plans, instructor-led and practical training, attendance, assessment, and effectiveness follow-up.
+#### 7.1 Training Dashboard
+Purpose: Summarize training needs and delivery.
+Data/layout:
+Cards: plans awaiting approval, upcoming sessions, scheduled employees, attendance missing, training in progress, reassessments due, gaps awaiting follow-up.
+Tables: upcoming sessions and open development plans with owners, due dates, and status.
+Actions: Open plan; Schedule session; Review results.
+#### 7.2 Development Plans
+Purpose: Convert approved recommendations and identified needs into trackable plans.
+Data/layout:
+Fields: employee, job, linked gap, current/required levels, activities, activity type, trainer/owner, planned dates, duration, evidence, success criteria, reviewer, status.
+Table: plan ID, employee, gap, recommendation source, activities, owner, target date, status, approval.
+Actions: Create; Edit; Submit; Approve; Return for revision; Assign; Monitor; Close after verification.
+#### 7.3 Training Calendar
+Purpose: Schedule sessions and manage capacity.
+Data/layout:
+Views: month, week, agenda.
+Event: title, course/activity, trainer, date/time, venue/link, department, participants, capacity, attendance requirement, status, linked gaps.
+Actions: Schedule; Reschedule; Cancel; Enroll; Notify participants; Record attendance.
+#### 7.4 Training Session Detail
+Purpose: Manage a specific session.
+Data/layout:
+Session objectives, trainer, enrolled participants, attendance register, materials, practical activities, assessment criteria, results, comments, linked plans, follow-up.
+Actions: Mark attendance; Record results; Flag absence; Record practical assessment; Request follow-up.
+#### 7.5 Attendance Register
+Purpose: Record participation accurately.
+Data/layout:
+Columns: employee ID/name, session, attendance status, attendance time if needed, recorded by, absence reason if provided, notes.
+Statuses: Registered, Attended, Partial Attendance, Absent, Excused, Cancelled.
+Actions: Update attendance; Review changes; Export if authorized.
+Rules/notes: Training attendance is not equivalent to competency attainment.
+#### 7.6 Training Results & Effectiveness
+Purpose: Track outcomes and whether gaps were addressed.
+Data/layout:
+Indicators: completion rate, assessment pass rate, practical results, reassessment outcomes, gaps resolved, gaps open, follow-up due.
+Fields: employee, gap, activity, pre-training evidence, completion, post-training assessment, assessor, result, follow-up date, notes.
+Actions: Record outcome; Schedule follow-up; Open reassessment.
+#### 7.7 Training Needs & AI Recommendations
+Purpose: Coordinate training from validated gaps and reviewed AI suggestions.
+Data/layout:
+Columns: employee, gap, priority, recommendation, mapped activity, rationale, reviewer, decision, date, status.
+Detail: source evidence, levels, training history, suggestion, rationale, learning resource, verification method, reviewer comments, decision.
+Actions: Accept; Edit; Reject; Request evidence; Create plan.
+Rules/notes: Show clearly when a course/activity is unavailable.
+## 8. Module 5 — Succession Planning
+Purpose: support structured review of critical roles, internal candidate development, and future-role competency gaps.
+#### 8.1 Succession Dashboard
+Purpose: Summarize critical-role coverage and plan activity.
+Data/layout:
+Cards: critical positions, positions without reviewed plans, plans awaiting review, candidates with development actions, reviews due.
+Tables: critical positions, candidate development status, pending decisions.
+Actions: Open position; Review plan; Open pending decision.
+Rules/notes: Treat succession information as sensitive and restrict it to authorized reviewers.
+#### 8.2 Critical Position Management
+Purpose: Define roles for which succession planning is required.
+Data/layout:
+Fields: position, department, criticality rationale, required competencies, qualifications, responsibilities, plan owner, review schedule, approval.
+Columns: position ID/title, department, incumbent if authorized, requirements, plan status, owner, review date.
+Actions: Create; Edit; Submit for approval; Review history.
+#### 8.3 Candidate Identification
+Purpose: Record candidates referred for a target role review.
+Data/layout:
+Columns: candidate, current role, target role, relevant qualifications, competency coverage, development gaps, review date, status.
+Capture rationale and evidence; filter by target role and authorized population.
+Actions: View evidence; Refer for review; Record rationale.
+Rules/notes: Do not automatically select candidates using an overall score or AI output alone.
+#### 8.4 Candidate Readiness & Gap Analysis
+Purpose: Compare validated candidate evidence with target-role requirements.
+Data/layout:
+Side-by-side target requirement and candidate evidence.
+Include qualification status, relevant experience, competency levels, gaps, assessment method, evidence date, reviewer, development plan, next review.
+Actions: Open assessment; Request evidence; Create development action.
+#### 8.5 Succession Plan Detail
+Purpose: Manage the plan and its review history.
+Data/layout:
+Target position and requirements; candidate details visible to authorized reviewers; evidence; competency gaps; development actions; comments; approvals; readiness status; next review; change history.
+Actions: Save draft; Submit; Return for revision; Approve; Update activities; Schedule review; Archive.
+#### 8.6 Succession Development Progress
+Purpose: Track target-role development activities.
+Data/layout:
+Columns: candidate, target role, activity, owner, due date, completion, reassessment, reviewer, next review.
+Actions: Update progress; Open training plan; Schedule review.
+Rules/notes: Readiness labels should be configured by the company and based on documented evidence.
+## 9. Module 6 — Social Recognition
+Purpose: record and share appropriate recognition for documented contributions, subject to visibility and approval rules.
+#### 9.1 Recognition Feed
+Purpose: Display permitted recognition posts.
+Data/layout:
+Post: recipient, date, contribution, category/company value, nominator message, reactions/comments if enabled, visibility label.
+Do not show private ratings, confidential performance data, or restricted HR notes.
+Actions: Nominate colleague; React/comment if enabled; Report content.
+#### 9.2 Submit Recognition Nomination
+Purpose: Capture a specific contribution for review.
+Data/layout:
+Fields: nominee, department, category, achievement date, specific contribution, evidence/explanation, related team/project, visibility, submitter, timestamp.
+Actions: Save draft; Submit; Withdraw if permitted.
+#### 9.3 Recognition Approval Queue
+Purpose: Review nominations.
+Data/layout:
+Columns: nomination ID, nominee, nominator, department, category, submitted date, reason, reviewer, status.
+Actions: Open; Approve; Decline with reason; Request information; Publish; Archive.
+#### 9.4 Recognition Detail
+Purpose: Show nomination and decision evidence.
+Data/layout:
+Nomination text, contribution evidence, category, reviewer comments, decision, publication settings, approval/audit history.
+Actions: Approve; Decline; Request more information; Publish if authorized.
+#### 9.5 My Recognition History
+Purpose: Let users review permitted recognition records.
+Data/layout:
+Columns: date, type, achievement, nominated/received, status, published date.
+Actions: Open detail; Filter history.
+#### 9.6 Recognition Analytics
+Purpose: Summarize program activity.
+Data/layout:
+Charts/tables: counts by period/category, participation by department, submitted/approved/declined, turnaround time.
+Restrict individual-level detail to authorized users.
+Actions: Filter; View detail; Export if authorized.
+Rules/notes: Recognition counts alone should not determine performance ratings or succession decisions.
+## 10. Administration and shared pages
+#### 10.1 Administrator Dashboard
+Purpose: Show system status and administrative workload.
+Data/layout:
+Active/inactive accounts, account requests, recent changes, configuration warnings, pending administrative tasks.
+Actions: Open alerts; Review activity.
+#### 10.2 User Management
+Purpose: Create and maintain system accounts.
+Data/layout:
+Columns: user ID, name, email/username, role, department, linked employee record, account status, last login.
+Form: identity, account role, department, employee link if relevant, status, account setup process.
+Actions: Create; Edit; Activate; Deactivate; Reset access through approved process.
+#### 10.3 Role & Permissions
+Purpose: Configure least-privilege access.
+Data/layout:
+Role name, module/page permissions, record scope, action permissions (view/create/edit/submit/approve/export/archive), effective status.
+Actions: Create role; Edit permissions; Review access.
+Rules/notes: Do not grant broad approval permissions by default.
+#### 10.4 Organization Setup
+Purpose: Maintain departments, positions, and reporting relationships.
+Data/layout:
+Department code/name/manager/status; job code/title/department/description; reporting lines; effective dates.
+Actions: Add; Edit; Deactivate; Assign manager.
+#### 10.5 System Configuration
+Purpose: Maintain configurable workflow rules.
+Data/layout:
+Rating scales and definitions, competency level definitions, statuses, evaluation templates, notification rules, approval routes, review schedules.
+Actions: Configure; Validate; Save; Review change history.
+#### 10.6 Audit Logs
+Purpose: Trace important actions.
+Data/layout:
+Actor, action, record type, record ID, timestamp, outcome, previous/new values where appropriate, reason.
+Actions: Search; Filter; View detail.
+Rules/notes: Restrict audit access and prevent ordinary users from modifying logs.
+#### 10.7 Notifications
+Purpose: Show tasks and alerts relevant to the logged-in user.
+Data/layout:
+Title/type, related record, message, date, due date, read status, action link.
+Actions: Open related item; Mark read.
+#### 10.8 Global Search
+Purpose: Find records within the user's permitted scope.
+Data/layout:
+Search employees, positions, competencies, evaluations, courses, training, development plans, recognition, succession records.
+Results show type, name, context, status, and permitted link.
+Actions: Open result.
+Rules/notes: Search results must respect record-level authorization.
+#### 10.9 My Profile & Account Settings
+Purpose: Manage own account details and preferences.
+Data/layout:
+Name, email, linked employee profile, role, department, notification preferences, password/security controls, help, sign out.
+Actions: Update permitted fields; Save preferences; Sign out.
+#### 10.10 Approval Center
+Purpose: Centralize delegated approval work.
+Data/layout:
+Columns: request ID/type, subject, submitter, submitted date, required action, status, record link.
+Actions: Open evidence; Approve; Return; Decline with reason.
+Rules/notes: Record decision-maker, timestamp, decision, and reason where required.
+## 11. Reports and analytics
+- Report area: Performance; Recommended fields / metrics: Evaluation completion, rating distribution, trend by comparable period, overdue reviews, development needs; Filters: Period, department, role, supervisor, status
+- Report area: Competency; Recommended fields / metrics: Required/current levels, open gaps, gap categories, assessment freshness, gap closure; Filters: Department, role, competency, criticality, status
+- Report area: Learning; Recommended fields / metrics: Enrollment, progress, completion, quiz outcomes, overdue courses; Filters: Course, department, role, period, status
+- Report area: Training; Recommended fields / metrics: Sessions, attendance, results, reassessments, outcomes, unresolved gaps; Filters: Activity, trainer, department, period, status
+- Report area: Succession; Recommended fields / metrics: Critical positions, plan coverage, candidate development progress, review dates; Filters: Target role, department, plan status, review date
+- Report area: Recognition; Recommended fields / metrics: Nominations, categories, approval status, participation, turnaround; Filters: Period, department, category, status
+- Report area: Audit/export; Recommended fields / metrics: Action, actor, record, timestamp, export status; Filters: User, action, record type, date
+### 11.1 Report Builder page
+Select report type.
+Choose authorized population or organizational scope.
+Select date range, evaluation cycle, and other filters.
+Select columns from the fields permitted to the user.
+Preview the result and confirm the population.
+Save a report definition if allowed.
+Export only in permitted formats.
+Record export metadata in export history.
+### 11.2 Export History
+Columns: report name, requested by, date/time, scope, format, result, download availability.
+Apply the same record-level permissions to exports as to the underlying pages.
+Avoid unrestricted exports of sensitive employee, evaluation, or succession data.
+## 12. Data relationships and cross-module workflow
+- Core record: User & Role; Relationships / purpose: Identity, permissions, and record scope.
+- Core record: Employee; Relationships / purpose: Linked to department, job, supervisor, employment status.
+- Core record: Job Position; Relationships / purpose: Linked to job description and required competencies.
+- Core record: Competency; Relationships / purpose: Defines skill/knowledge area and assessment criteria.
+- Core record: Competency Assessment; Relationships / purpose: Links employee, competency, rating, assessor, evidence, and date.
+- Core record: Competency Gap; Relationships / purpose: Links required/current levels to a development need.
+- Core record: AI Recommendation; Relationships / purpose: Links gap to suggested activities, rationale, and reviewer decisions.
+- Core record: Course / Learning Material; Relationships / purpose: Mapped to competencies and learning objectives.
+- Core record: Training Assignment; Relationships / purpose: Links employee, course/activity, schedule, trainer, and status.
+- Core record: Training Assessment; Relationships / purpose: Records quiz or practical assessment outcome.
+- Core record: Performance Evaluation; Relationships / purpose: Links employee, cycle, criteria, ratings, evidence, and feedback.
+- Core record: Recognition Record; Relationships / purpose: Links nomination, achievement, review, decision, and publication.
+- Core record: Succession Plan; Relationships / purpose: Links target role, candidate, requirements, gaps, actions, and reviews.
+The Job Position also links to an approved Evaluation Profile. The Evaluation Profile links common criteria, position-specific KPIs, required competencies, rating definitions, weights, evidence rules, and critical requirements so that the Performance Evaluation form is generated from position context. The Performance Evaluation stores the profile/version used for the cycle.
+### 12.1 End-to-end workflow
+Administrator creates users, roles, organization structure, and access rules.
+HR maintains employee records, job positions, and approved job descriptions.
+The company defines required competencies for each relevant role.
+HR opens a performance evaluation cycle and assigns self- and supervisor reviews as configured.
+43. Employees and supervisors complete evaluations using the employee’s approved Evaluation Profile: common criteria plus position-specific KPIs, competencies, evidence requirements, and critical requirements.
+The supervisor or qualified assessor validates competency levels against job requirements.
+The system calculates applicable gaps and flags missing or mandatory qualifications separately.
+The application sends authorized, validated inputs to Gemini 2.5 Flash.
+The AI returns proposed, gap-linked learning/training recommendations.
+The Supervisor or Training Officer reviews and accepts, edits, or rejects the recommendations.
+Approved recommendations become development plans and course/training assignments.
+The LMS delivers learning materials and records progress and knowledge checks.
+Training Management schedules sessions, records attendance, and captures practical outcomes.
+The supervisor/qualified assessor reassesses competency using the defined method.
+The system updates gap status based on evidence; unresolved gaps receive further development actions.
+Social Recognition handles appropriate contribution nominations and approvals as a parallel outcome.
+Succession Planning uses target-role requirements and authorized evidence for separate future-role reviews.
+Reports summarize authorized performance, competency, learning, training, recognition, and succession information.
+### 12.2 Status examples
+- Process: Evaluation; Possible statuses: Draft, Assigned, In Progress, Submitted, Under Review, Returned, Finalized, Reopened, Archived
+- Process: Competency gap; Possible statuses: Identified, Awaiting Review, Training Recommended, Training Approved, In Progress, Awaiting Reassessment, Resolved, Further Development Required
+- Process: Course; Possible statuses: Draft, In Review, Published, Unpublished, Archived
+- Process: Training plan; Possible statuses: Draft, Awaiting Approval, Approved, Scheduled, In Progress, Awaiting Assessment, Completed, Follow-up Required, Cancelled
+- Process: Recognition; Possible statuses: Draft, Submitted, Under Review, Needs Information, Approved, Declined, Published, Archived
+- Process: Succession plan; Possible statuses: Draft, Under Review, Approved, Active, Review Due, Updated, Archived
+## 13. Permissions, audit, privacy, and exception handling
+### 13.1 Approval boundaries
+- Action: Create accounts and assign permissions; Performer: Super Admin / Admin (within assigned permissions); Reviewer / approval boundary: Super Admin governs roles and permissions; Admin handles routine account administration.
+- Action: Maintain employee/job records; Performer: HR Administrator; Reviewer / approval boundary: Department Head or designated approver where policy requires.
+- Action: Complete self-evaluation; Performer: Employee; Reviewer / approval boundary: Assigned supervisor reviews.
+- Action: Rate employee performance; Performer: Supervisor; Reviewer / approval boundary: HR Administrator reviews according to policy.
+- Action: Validate competency evidence; Performer: Supervisor / qualified assessor; Reviewer / approval boundary: Designated reviewer if required.
+- Action: Generate AI suggestions; Performer: Application + Gemini service; Reviewer / approval boundary: Supervisor / Operations Manager reviews recommendations.
+- Action: Publish learning content; Performer: Operations Manager (Training & Development Officer); Reviewer / approval boundary: HR Administrator or designated content approver, if configured.
+- Action: Record training completion; Performer: Employee / trainer / Training Officer; Reviewer / approval boundary: Supervisor verifies practical competency where applicable.
+- Action: Nominate recognition; Performer: Employee / supervisor / permitted colleague; Reviewer / approval boundary: Designated recognition approver.
+- Action: Review succession candidates; Performer: HR Administrator / Supervisor; Reviewer / approval boundary: Department Head reviews or approves where required.
+### 13.2 Exception handling
+- Scenario: Evaluation incomplete; System behavior: Flag missing fields or overdue task; notify responsible person; keep status incomplete.
+- Scenario: Employee and supervisor ratings differ; System behavior: Retain both ratings and comments; route discussion/review according to policy.
+- Scenario: AI recommendation unsupported; System behavior: Flag for human review; do not auto-assign; allow rejection or correction of source data.
+- Scenario: No suitable learning content; System behavior: Training Officer selects coaching, practical training, or requests content creation; gap stays open.
+- Scenario: Training completed but reassessment failed; System behavior: Record course completion but leave competency gap unresolved; plan additional practice or reassessment.
+- Scenario: Mandatory qualification expired/missing; System behavior: Flag for action; restrict affected duties when company rules or law require it.
+- Scenario: AI service unavailable; System behavior: Allow authorized manual recommendation/plan workflow or retry safely; preserve input and error status.
+- Scenario: Unauthorized record access; System behavior: Deny access and record security-relevant event according to policy.
+### 13.3 Privacy and security
+Apply least-privilege access and record-level scope by role.
+Limit AI inputs to information necessary for the task; follow company privacy and retention policies.
+Protect performance reviews, personal records, and succession information from public feeds and broad exports.
+Keep audit history for important record changes, approvals, AI suggestions, and exports.
+Make sure the UI and server/API enforce the same authorization rules.
+Do not treat AI recommendations as authoritative facts or as the sole basis for consequential employment decisions.
+Use human verification for safety-critical competency and qualification requirements.
+## 14. Recommended implementation sequence
+- Phase: 1. Foundation; Build scope: Authentication, roles, employee records, departments, job positions, competency library; Reason: Creates common identity and reference data.
+- Phase: 2. Performance; Build scope: Cycles, assignments, forms, review, history; Reason: Provides structured performance evidence.
+- Phase: 3. Competency; Build scope: Job requirements, assessment, matrix, gap analysis; Reason: Establishes current-vs-required capability.
+- Phase: 4. AI integration; Build scope: Validated input, structured recommendations, review, audit; Reason: Implements the named research contribution.
+- Phase: 5. Learning & training; Build scope: Courses, paths, plans, schedules, results, reassessment; Reason: Turns recommendations into development and verifies outcomes.
+- Phase: 6. Social Recognition; Build scope: Nomination, approval, feed, history; Reason: Captures positive contribution and recognition.
+- Phase: 7. Succession Planning; Build scope: Critical positions, candidate review, target-role gaps, plans; Reason: Uses role-specific evidence for future-role development.
+- Phase: 8. Reporting & refinement; Build scope: Authorized dashboards, exports, notifications, audit checks, responsive UI; Reason: Improves monitoring and production readiness.
+## 15. Final validation checklist
+### Foundation
+☐ Create accounts and assign role-based permissions.
+☐ Maintain departments, job positions, employee records, and supervisors.
+☐ Define job descriptions and required competencies.
+### Performance and competency
+☐ Assign evaluation cycles and self-evaluation forms.
+☐ Allow supervisors to record ratings, comments, and evidence.
+☐ Assess current competency against job requirements.
+☐ Calculate and display competency gaps.
+### AI and development
+☐ Send validated, authorized data to Gemini 2.5 Flash.
+☐ Generate gap-linked personalized training recommendations.
+☐ Allow human reviewers to accept, edit, or reject suggestions.
+☐ Create and track employee development plans.
+### Learning and training
+☐ Maintain courses, materials, and competency mappings.
+☐ Assign learning activities and record progress.
+☐ Schedule and record instructor-led or practical training.
+☐ Reassess competency and track unresolved gaps.
+### Recognition and succession
+☐ Submit and review social recognition nominations.
+☐ Define target-role requirements for succession planning.
+☐ Review candidate gaps and development needs.
+☐ Record decisions, review dates, and development actions.
+### Governance and reporting
+☐ Restrict sensitive information by role.
+☐ Maintain an audit trail of assessments and AI recommendations.
+☐ Handle incomplete evaluations and failed reassessments.
+☐ Produce authorized performance, competency, learning, training, recognition, and succession reports.
+## Final design recommendation
+The application should use role-based navigation and a shared data model across all six core modules. Its central cycle is: performance evidence → competency assessment → gap analysis → Gemini-assisted personalized recommendations → approved learning/training → reassessment. Social Recognition and Succession Planning are related but distinct outcomes and should not be mandatory steps for every employee. The seven retained roles absorb the former HR Manager, Learning Content Manager, Senior Management, and HR Analyst / Report Viewer responsibilities; reporting and approvals remain permission-scoped.
+Before implementation, validate role names, approval rules, scoring scales, evaluation criteria, mandatory qualifications, and reporting requirements with the partner freight and logistics company. Treat all sample values and workflow statuses in this document as proposed configuration until approved.
