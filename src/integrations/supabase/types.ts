@@ -490,6 +490,7 @@ export type Database = {
           cycle_id: string | null;
           employee_id: string;
           evidence_summary: string | null;
+          assessment_method: string | null;
           id: string;
           is_demo: boolean;
           is_reassessment: boolean;
@@ -512,6 +513,7 @@ export type Database = {
           cycle_id?: string | null;
           employee_id: string;
           evidence_summary?: string | null;
+          assessment_method?: string | null;
           id?: string;
           is_demo?: boolean;
           is_reassessment?: boolean;
@@ -534,6 +536,7 @@ export type Database = {
           cycle_id?: string | null;
           employee_id?: string;
           evidence_summary?: string | null;
+          assessment_method?: string | null;
           id?: string;
           is_demo?: boolean;
           is_reassessment?: boolean;
@@ -1600,6 +1603,7 @@ export type Database = {
           reopen_reason: string | null;
           self_evaluation: boolean;
           self_score: number | null;
+          self_profile_score: number | null;
           self_submitted_at: string | null;
           supervisor_score: number | null;
           snapshot: Json;
@@ -1630,6 +1634,7 @@ export type Database = {
           reopen_reason?: string | null;
           self_evaluation?: boolean;
           self_score?: number | null;
+          self_profile_score?: number | null;
           self_submitted_at?: string | null;
           supervisor_score?: number | null;
           snapshot: Json;
@@ -1660,6 +1665,7 @@ export type Database = {
           reopen_reason?: string | null;
           self_evaluation?: boolean;
           self_score?: number | null;
+          self_profile_score?: number | null;
           self_submitted_at?: string | null;
           supervisor_score?: number | null;
           snapshot?: Json;
@@ -1750,6 +1756,176 @@ export type Database = {
           version?: number;
         };
         Relationships: [];
+      };
+      employee_critical_requirements: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          description: string | null;
+          employee_id: string;
+          expires_on: string | null;
+          file_id: string | null;
+          id: string;
+          is_active: boolean;
+          is_safety_critical: boolean;
+          issuing_authority: string | null;
+          name: string;
+          reference_number: string | null;
+          requirement_type: string;
+          updated_at: string;
+          updated_by: string | null;
+          valid_from: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          employee_id: string;
+          expires_on?: string | null;
+          file_id?: string | null;
+          id?: string;
+          is_active?: boolean;
+          is_safety_critical?: boolean;
+          issuing_authority?: string | null;
+          name: string;
+          reference_number?: string | null;
+          requirement_type: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          valid_from?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          employee_id?: string;
+          expires_on?: string | null;
+          file_id?: string | null;
+          id?: string;
+          is_active?: boolean;
+          is_safety_critical?: boolean;
+          issuing_authority?: string | null;
+          name?: string;
+          reference_number?: string | null;
+          requirement_type?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          valid_from?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "employee_critical_requirements_employee_id_fkey";
+            columns: ["employee_id"];
+            isOneToOne: false;
+            referencedRelation: "employees";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "employee_critical_requirements_file_id_fkey";
+            columns: ["file_id"];
+            isOneToOne: false;
+            referencedRelation: "file_metadata";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      evaluation_critical_requirement_reviews: {
+        Row: {
+          assignment_id: string;
+          comments: string | null;
+          compliance_status: string;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          requirement_id: string;
+          reviewed_at: string;
+          reviewed_by: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          assignment_id: string;
+          comments?: string | null;
+          compliance_status: string;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          requirement_id: string;
+          reviewed_at?: string;
+          reviewed_by?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          assignment_id?: string;
+          comments?: string | null;
+          compliance_status?: string;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          requirement_id?: string;
+          reviewed_at?: string;
+          reviewed_by?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_critical_requirement_reviews_assignment_id_fkey";
+            columns: ["assignment_id"];
+            isOneToOne: false;
+            referencedRelation: "evaluation_assignments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "evaluation_critical_requirement_reviews_requirement_id_fkey";
+            columns: ["requirement_id"];
+            isOneToOne: false;
+            referencedRelation: "employee_critical_requirements";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      evaluation_development_responses: {
+        Row: {
+          assignment_id: string;
+          content: Json;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          respondent: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          assignment_id: string;
+          content?: Json;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          respondent: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          assignment_id?: string;
+          content?: Json;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          respondent?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_development_responses_assignment_id_fkey";
+            columns: ["assignment_id"];
+            isOneToOne: false;
+            referencedRelation: "evaluation_assignments";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       evaluation_evidence: {
         Row: {
@@ -4425,6 +4601,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      evaluation_competency_assessor_names: {
+        Args: { _assessment_ids: string[] };
+        Returns: { assessment_id: string; assessor_name: string }[];
+      };
       _assert_succession_write: { Args: { _dept: string }; Returns: undefined };
       _build_snapshot: { Args: { _version_id: string }; Returns: Json };
       _idem_get: {
@@ -4753,6 +4933,17 @@ export type Database = {
         };
         Returns: Json;
       };
+      review_evaluation_critical_requirement: {
+        Args: {
+          _assignment: string;
+          _comments: string;
+          _hash: string;
+          _idem: string;
+          _requirement: string;
+          _status: string;
+        };
+        Returns: Json;
+      };
       review_nomination: {
         Args: {
           _comments: string;
@@ -4784,6 +4975,7 @@ export type Database = {
           _evidence: string;
           _id: string;
           _level: number;
+          _method?: string | null;
           _reassess: boolean;
           _version: number;
         };
@@ -4809,10 +5001,30 @@ export type Database = {
       save_evaluation: {
         Args: {
           _assignment: string;
+          _development: Json;
           _expected: number;
-          _overall_comment: string;
+          _overall_comment: string | null;
           _respondent: string;
           _responses: Json;
+        };
+        Returns: Json;
+      };
+      save_employee_critical_requirement: {
+        Args: {
+          _active: boolean;
+          _description: string;
+          _employee: string;
+          _expires_on: string | null;
+          _file: string | null;
+          _hash: string;
+          _authority: string;
+          _id: string | null;
+          _idem: string;
+          _name: string;
+          _reference: string;
+          _safety: boolean;
+          _type: string;
+          _valid_from: string | null;
         };
         Returns: Json;
       };

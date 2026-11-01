@@ -20,6 +20,8 @@ import {
   savedReportSchema,
   performanceFactorCodes,
   performanceFactorTitles,
+  developmentResponseSchema,
+  saveCriticalRequirementSchema,
 } from "@/lib/schemas";
 
 describe("gap calculation", () => {
@@ -128,6 +130,75 @@ describe("evaluation scale and acknowledgement validation", () => {
       false,
     );
     expect(profileContentSchema.safeParse({ ...profile, rating_scale_max: 3 }).success).toBe(false);
+  });
+  it("requires configured rating and KPI item weights to total 100 percent", () => {
+    const weightedItems = {
+      ...profile,
+      sections: [
+        {
+          title: "Position criteria",
+          items: [
+            {
+              label: "Configured rating",
+              item_type: "rating" as const,
+              weight: 60,
+              options: [],
+              evidence_required: false,
+              is_required: true,
+            },
+            {
+              label: "Configured KPI",
+              item_type: "kpi" as const,
+              weight: 40,
+              options: [],
+              kpi_target: 10,
+              evidence_required: false,
+              is_required: true,
+            },
+          ],
+        },
+      ],
+    };
+    expect(profileContentSchema.safeParse(weightedItems).success).toBe(true);
+    expect(
+      profileContentSchema.safeParse({
+        ...weightedItems,
+        sections: [
+          {
+            ...weightedItems.sections[0]!,
+            items: weightedItems.sections[0]!.items.map((item) => ({ ...item, weight: 30 })),
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+  it("validates structured development responses and critical requirement dates", () => {
+    expect(
+      developmentResponseSchema.safeParse({
+        strengths: "Reliable",
+        rating_difference_explanations: "Discussed with the employee.",
+      }).success,
+    ).toBe(true);
+    expect(developmentResponseSchema.safeParse({ unknown_section: "not accepted" }).success).toBe(
+      false,
+    );
+    expect(
+      saveCriticalRequirementSchema.safeParse({
+        id: null,
+        employee_id: crypto.randomUUID(),
+        requirement_type: "license",
+        name: "Operator license",
+        description: null,
+        issuing_authority: null,
+        reference_number: null,
+        valid_from: "2026-03-01",
+        expires_on: "2026-02-01",
+        file_id: null,
+        is_safety_critical: false,
+        is_active: true,
+        idempotencyKey: crypto.randomUUID(),
+      }).success,
+    ).toBe(false);
   });
   it("rejects fractional and out-of-range evaluation ratings", () => {
     const item_id = crypto.randomUUID();

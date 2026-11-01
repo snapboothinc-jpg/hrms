@@ -36,16 +36,6 @@ const schema = z.object({
   password: z.string().min(1, "Enter your password"),
 });
 
-const DEMO = [
-  ["Super Admin", "victor.superadmin+priority@gmail.com"],
-  ["Admin", "nina.admin+priority@gmail.com"],
-  ["HR Administrator", "liza.hradmin+priority@gmail.com"],
-  ["Department Head", "maria.depthead+priority@gmail.com"],
-  ["Supervisor", "jose.supervisor+priority@gmail.com"],
-  ["Employee", "ana.employee+priority@gmail.com"],
-  ["Operations Manager", "carlo.opsmanager+priority@gmail.com"],
-] as const;
-
 function safeRedirect(r?: string) {
   if (!r) return "/dashboard";
   try {
@@ -138,35 +128,6 @@ function AuthPage() {
             </Button>
           </form>
         </section>
-
-        {import.meta.env.DEV && (
-          <details className="surface mt-4 w-full p-3 text-sm">
-            <summary className="min-h-8 cursor-pointer content-center font-bold">
-              Demo accounts
-            </summary>
-            <p className="mt-2 text-muted-foreground">
-              Development demo data only. Password for all:{" "}
-              <code className="font-data">Test1234!</code>
-            </p>
-            <ul className="mt-2 space-y-1">
-              {DEMO.map(([role, email]) => (
-                <li key={email}>
-                  <button
-                    type="button"
-                    className="min-h-8 w-full rounded px-2 py-1 text-left hover:bg-accent"
-                    onClick={() => {
-                      form.setValue("email", email);
-                      form.setValue("password", "Test1234!");
-                    }}
-                  >
-                    <span className="font-bold">{role}</span>{" "}
-                    <span className="font-data text-muted-foreground">{email}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
       </div>
     </main>
   );

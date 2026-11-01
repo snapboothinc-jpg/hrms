@@ -145,6 +145,8 @@ describe("AI response validation", () => {
       {
         employee: { id: uuid(), name: "Test", position: "Test", department: "Test" },
         performance_results: null,
+        position_kpis: [],
+        development_outcomes: null,
         development_comments: [],
         learning_history: [],
         gaps: [

@@ -64,6 +64,22 @@ export interface AiContext {
       supervisor_comment: string | null;
     }[];
   } | null;
+  position_kpis: {
+    name: string | null;
+    description: string | null;
+    target: number | null;
+    unit: string | null;
+    employee_actual: number | null;
+    supervisor_actual: number | null;
+    employee_rating: number | null;
+    supervisor_rating: number | null;
+    employee_comment: string | null;
+    supervisor_comment: string | null;
+  }[];
+  development_outcomes: {
+    employee: Record<string, string> | null;
+    supervisor: Record<string, string> | null;
+  } | null;
   development_comments: string[];
   learning_history: { title: string; type: string; status: string; completed_at: string | null }[];
   gaps: {
@@ -87,6 +103,8 @@ function buildPrompt(ctx: AiContext): string {
     "never infer or change ratings; use performance results only to contextualize development needs.",
     "Employee: " + JSON.stringify(ctx.employee),
     "Latest finalized performance results: " + JSON.stringify(ctx.performance_results),
+    "Configured position-specific KPI outcomes: " + JSON.stringify(ctx.position_kpis),
+    "Employee and supervisor development outcomes: " + JSON.stringify(ctx.development_outcomes),
     "Development comments: " + JSON.stringify(ctx.development_comments),
     "Previous learning history: " + JSON.stringify(ctx.learning_history),
     "Gaps: " + JSON.stringify(ctx.gaps),
