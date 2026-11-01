@@ -115,6 +115,7 @@ describe("AI response validation", () => {
     priority: "high",
     rationale: "Gap of 2 levels in load planning",
     expected_outcome: "Reach level 4",
+    assessment_method: "Complete a supervisor-observed load-planning exercise.",
   } as const;
   it("accepts a well-formed response", () => {
     expect(aiResponseSchema.safeParse({ recommendations: [item] }).success).toBe(true);
@@ -143,6 +144,9 @@ describe("AI response validation", () => {
     const result = filterAiRecommendations(
       {
         employee: { id: uuid(), name: "Test", position: "Test", department: "Test" },
+        performance_results: null,
+        development_comments: [],
+        learning_history: [],
         gaps: [
           {
             competency_id: gap,

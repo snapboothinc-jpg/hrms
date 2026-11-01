@@ -550,16 +550,18 @@ variables, deployment operations, and safety requirements.
    status output into the corresponding Supabase variables in `.env`. The example
    already contains the local Postgres URL and port.
 
-3. Check and apply the reviewed SQL migrations to the local database:
+3. Supabase CLI applies `supabase/migrations/` during local startup. Check the
+   migration sources and local history:
 
    ```sh
    npm run db:check
-   npm run db:migrate
+   npx supabase migration list --local
    ```
 
-   Never run development migrations or demo seeding against production. Demo
-   fixtures are optional and require an empty, isolated development database;
-   follow the guarded steps in [the runbook](./docs/RUNBOOK.md#setup).
+   For a linked database, review `npm run db:migrations:list` and
+   `npm run db:push:dry-run` before a deliberate `npm run db:push`. Supabase CLI
+   automatic seed execution is disabled. Development demo fixtures are separate
+   and require the guarded command in [the runbook](./docs/RUNBOOK.md#setup).
 
 4. Start the app:
 

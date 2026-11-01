@@ -140,6 +140,7 @@ export type Database = {
           created_by: string | null;
           current_level: number | null;
           employee_id: string;
+          assessment_method: string | null;
           expected_outcome: string | null;
           gap: number;
           gap_snapshot_id: string | null;
@@ -164,6 +165,7 @@ export type Database = {
           created_by?: string | null;
           current_level?: number | null;
           employee_id: string;
+          assessment_method?: string | null;
           expected_outcome?: string | null;
           gap: number;
           gap_snapshot_id?: string | null;
@@ -188,6 +190,7 @@ export type Database = {
           created_by?: string | null;
           current_level?: number | null;
           employee_id?: string;
+          assessment_method?: string | null;
           expected_outcome?: string | null;
           gap?: number;
           gap_snapshot_id?: string | null;
@@ -1197,6 +1200,7 @@ export type Database = {
       development_plan_items: {
         Row: {
           ai_recommendation_id: string | null;
+          assessment_method: string | null;
           competency_id: string | null;
           completed_at: string | null;
           course_id: string | null;
@@ -1221,6 +1225,7 @@ export type Database = {
         };
         Insert: {
           ai_recommendation_id?: string | null;
+          assessment_method?: string | null;
           competency_id?: string | null;
           completed_at?: string | null;
           course_id?: string | null;
@@ -1245,6 +1250,7 @@ export type Database = {
         };
         Update: {
           ai_recommendation_id?: string | null;
+          assessment_method?: string | null;
           competency_id?: string | null;
           completed_at?: string | null;
           course_id?: string | null;
@@ -1579,11 +1585,13 @@ export type Database = {
           acknowledged_at: string | null;
           acknowledged_by: string | null;
           acknowledgement_comment: string | null;
+          classification: string | null;
           created_at: string;
           created_by: string | null;
           cycle_id: string;
           employee_id: string;
           evaluator_id: string;
+          final_score: number | null;
           id: string;
           is_demo: boolean;
           overall_comment: string | null;
@@ -1591,7 +1599,9 @@ export type Database = {
           profile_version_id: string;
           reopen_reason: string | null;
           self_evaluation: boolean;
+          self_score: number | null;
           self_submitted_at: string | null;
+          supervisor_score: number | null;
           snapshot: Json;
           status: string;
           submitted_at: string | null;
@@ -1605,11 +1615,13 @@ export type Database = {
           acknowledged_at?: string | null;
           acknowledged_by?: string | null;
           acknowledgement_comment?: string | null;
+          classification?: string | null;
           created_at?: string;
           created_by?: string | null;
           cycle_id: string;
           employee_id: string;
           evaluator_id: string;
+          final_score?: number | null;
           id?: string;
           is_demo?: boolean;
           overall_comment?: string | null;
@@ -1617,7 +1629,9 @@ export type Database = {
           profile_version_id: string;
           reopen_reason?: string | null;
           self_evaluation?: boolean;
+          self_score?: number | null;
           self_submitted_at?: string | null;
+          supervisor_score?: number | null;
           snapshot: Json;
           status?: string;
           submitted_at?: string | null;
@@ -1631,11 +1645,13 @@ export type Database = {
           acknowledged_at?: string | null;
           acknowledged_by?: string | null;
           acknowledgement_comment?: string | null;
+          classification?: string | null;
           created_at?: string;
           created_by?: string | null;
           cycle_id?: string;
           employee_id?: string;
           evaluator_id?: string;
+          final_score?: number | null;
           id?: string;
           is_demo?: boolean;
           overall_comment?: string | null;
@@ -1643,7 +1659,9 @@ export type Database = {
           profile_version_id?: string;
           reopen_reason?: string | null;
           self_evaluation?: boolean;
+          self_score?: number | null;
           self_submitted_at?: string | null;
+          supervisor_score?: number | null;
           snapshot?: Json;
           status?: string;
           submitted_at?: string | null;
@@ -1738,6 +1756,7 @@ export type Database = {
           assignment_id: string;
           created_at: string;
           created_by: string | null;
+          factor_code: string | null;
           file_id: string | null;
           id: string;
           item_id: string | null;
@@ -1749,6 +1768,7 @@ export type Database = {
           assignment_id: string;
           created_at?: string;
           created_by?: string | null;
+          factor_code?: string | null;
           file_id?: string | null;
           id?: string;
           item_id?: string | null;
@@ -1760,6 +1780,7 @@ export type Database = {
           assignment_id?: string;
           created_at?: string;
           created_by?: string | null;
+          factor_code?: string | null;
           file_id?: string | null;
           id?: string;
           item_id?: string | null;
@@ -1780,6 +1801,109 @@ export type Database = {
             columns: ["file_id"];
             isOneToOne: false;
             referencedRelation: "file_metadata";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      evaluation_factor_responses: {
+        Row: {
+          assignment_id: string;
+          comment: string | null;
+          created_at: string;
+          created_by: string | null;
+          factor_code: string;
+          id: string;
+          rating: number | null;
+          respondent: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          assignment_id: string;
+          comment?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          factor_code: string;
+          id?: string;
+          rating?: number | null;
+          respondent: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          assignment_id?: string;
+          comment?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          factor_code?: string;
+          id?: string;
+          rating?: number | null;
+          respondent?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_factor_responses_assignment_id_fkey";
+            columns: ["assignment_id"];
+            isOneToOne: false;
+            referencedRelation: "evaluation_assignments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      evaluation_profile_factors: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          description: string;
+          evidence_required: boolean;
+          factor_code: string;
+          id: string;
+          indicators: Json;
+          sort_order: number;
+          title: string;
+          updated_at: string;
+          updated_by: string | null;
+          version_id: string;
+          weight: number;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          description: string;
+          evidence_required?: boolean;
+          factor_code: string;
+          id?: string;
+          indicators?: Json;
+          sort_order: number;
+          title: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          version_id: string;
+          weight?: number;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          evidence_required?: boolean;
+          factor_code?: string;
+          id?: string;
+          indicators?: Json;
+          sort_order?: number;
+          title?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          version_id?: string;
+          weight?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_profile_factors_version_id_fkey";
+            columns: ["version_id"];
+            isOneToOne: false;
+            referencedRelation: "evaluation_profile_versions";
             referencedColumns: ["id"];
           },
         ];
@@ -1873,6 +1997,7 @@ export type Database = {
         Row: {
           activated_at: string | null;
           activated_by: string | null;
+          classification_thresholds: Json;
           created_at: string;
           created_by: string | null;
           effective_date: string | null;
@@ -1882,6 +2007,8 @@ export type Database = {
           position_id: string;
           profile_id: string;
           rating_scale_max: number;
+          scoring_method: string;
+          final_score_rule: string;
           status: string;
           updated_at: string;
           updated_by: string | null;
@@ -1891,6 +2018,7 @@ export type Database = {
         Insert: {
           activated_at?: string | null;
           activated_by?: string | null;
+          classification_thresholds?: Json;
           created_at?: string;
           created_by?: string | null;
           effective_date?: string | null;
@@ -1900,6 +2028,8 @@ export type Database = {
           position_id: string;
           profile_id: string;
           rating_scale_max?: number;
+          scoring_method?: string;
+          final_score_rule?: string;
           status?: string;
           updated_at?: string;
           updated_by?: string | null;
@@ -1909,6 +2039,7 @@ export type Database = {
         Update: {
           activated_at?: string | null;
           activated_by?: string | null;
+          classification_thresholds?: Json;
           created_at?: string;
           created_by?: string | null;
           effective_date?: string | null;
@@ -1918,6 +2049,8 @@ export type Database = {
           position_id?: string;
           profile_id?: string;
           rating_scale_max?: number;
+          scoring_method?: string;
+          final_score_rule?: string;
           status?: string;
           updated_at?: string;
           updated_by?: string | null;

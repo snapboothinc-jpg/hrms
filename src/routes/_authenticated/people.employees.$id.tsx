@@ -305,7 +305,8 @@ function Page() {
                       {a.cycle?.name}
                     </Link>
                     <span className="flex items-center gap-3 font-data">
-                      {a.overall_score != null && `Score ${a.overall_score}`}
+                      {a.final_score != null && `Final score ${a.final_score} / 5`}
+                      {a.classification && ` · ${a.classification}`}
                       <StatusBadge status={a.status} />
                     </span>
                   </li>

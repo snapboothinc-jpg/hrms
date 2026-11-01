@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { computeGap, weightTotal, canActivateProfile, computeScore } from "@/lib/rules";
+import {
+  computeGap,
+  weightTotal,
+  canActivateProfile,
+  computeScore,
+  computePerformanceScore,
+  classifyPerformanceScore,
+} from "@/lib/rules";
 import { canTransition, EVALUATION_TRANSITIONS, ASSESSMENT_TRANSITIONS } from "@/lib/policy";
 import { mapDbError } from "@/lib/api/result";
 import { NAV, ROLE_MENU, canSee, getRoleNavigation } from "@/lib/policy";
@@ -11,6 +18,8 @@ import {
   personalGoalProgressSchema,
   reportSchema,
   savedReportSchema,
+  performanceFactorCodes,
+  performanceFactorTitles,
 } from "@/lib/schemas";
 
 describe("gap calculation", () => {
@@ -76,11 +85,41 @@ describe("scoring", () => {
   it("unanswered items score 0", () => {
     expect(computeScore(items, [], 5)).toBe(0);
   });
+  it("calculates weighted and equal performance scores on the 1-5 scale", () => {
+    const factors = [
+      { factor_code: "quality_of_work", weight: 75, rating: 4 },
+      { factor_code: "safety_consciousness_equipment", weight: 25, rating: 2 },
+    ];
+    expect(computePerformanceScore(factors, "weighted")).toBe(3.5);
+    expect(computePerformanceScore(factors, "equal")).toBe(3);
+    expect(computePerformanceScore([], "equal")).toBeNull();
+  });
+  it("applies only explicitly configured performance classifications", () => {
+    const ranges = [
+      { label: "Needs improvement", min: 1, max: 2.49 },
+      { label: "Effective", min: 2.5, max: 5 },
+    ];
+    expect(classifyPerformanceScore(2.49, ranges)).toBe("Needs improvement");
+    expect(classifyPerformanceScore(2.5, ranges)).toBe("Effective");
+    expect(classifyPerformanceScore(4, [])).toBeNull();
+  });
 });
 
 describe("evaluation scale and acknowledgement validation", () => {
   const profile = {
     rating_scale_max: 5,
+    scoring_method: "equal" as const,
+    final_score_rule: "supervisor" as const,
+    classification_thresholds: [],
+    performance_factors: performanceFactorCodes.map((factor_code, sort_order) => ({
+      factor_code,
+      title: performanceFactorTitles[factor_code],
+      description: `Description for ${factor_code}`,
+      indicators: ["Demonstrates this performance factor"],
+      weight: 10,
+      evidence_required: false,
+      sort_order,
+    })),
     sections: [],
   };
   it("only accepts the fixed 1–5 profile scale", () => {

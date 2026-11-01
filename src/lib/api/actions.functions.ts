@@ -21,6 +21,7 @@ import {
   acknowledgeEvaluationSchema,
   reviewEvaluationSchema,
   reopenEvaluationSchema,
+  addPerformanceFactorEvidenceSchema,
   createAssignmentsSchema,
   competencyFields,
   requirementSchema,
@@ -304,7 +305,10 @@ export const saveEvaluation = createServerFn({ method: "POST" })
       rpc(context.supabase, "save_evaluation", {
         _assignment: data.assignment_id,
         _respondent: data.respondent,
-        _responses: data.responses,
+        _responses: {
+          items: data.responses,
+          performance_factors: data.factor_responses,
+        },
         _overall_comment: data.overall_comment,
         _expected: data.version,
       }),
@@ -385,6 +389,22 @@ export const addEvaluationEvidence = createServerFn({ method: "POST" })
         _file: data.file_id,
         _note: data.note,
         _item: data.item_id,
+      }),
+    ),
+  );
+
+export const addPerformanceFactorEvidence = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => addPerformanceFactorEvidenceSchema.parse(d))
+  .handler(async ({ data, context }) =>
+    runOp("add_performance_factor_evidence", context.userId, async () =>
+      rpc(context.supabase, "add_performance_factor_evidence", {
+        _assignment: data.assignment_id,
+        _factor_code: data.factor_code,
+        _file: data.file_id,
+        _note: data.note,
+        _idem: data.idempotencyKey,
+        _hash: await hashBody(withoutKey(data)),
       }),
     ),
   );

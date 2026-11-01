@@ -2,54 +2,53 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const migrationsDir = join(root, "drizzle", "migrations");
-const metaDir = join(migrationsDir, "meta");
-const entries = JSON.parse(await readFile(join(metaDir, "_journal.json"), "utf8")).entries;
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const migrationsDir = join(root, "supabase", "migrations");
 const files = (await readdir(migrationsDir)).filter((file) => file.endsWith(".sql")).sort();
 
-if (entries.length < 6) {
-  throw new Error(`Expected at least 6 logical SQL migrations; found ${entries.length}`);
-}
-
-if (entries.length !== files.length) {
-  throw new Error(
-    `Journal lists ${entries.length} migrations, but the folder contains ${files.length} SQL files`,
-  );
+if (files.length < 6) {
+  throw new Error(`Expected at least 6 logical SQL migrations; found ${files.length}`);
 }
 
 const allSql = [];
-let previousWhen = 0;
-for (const [index, entry] of entries.entries()) {
-  if (entry.idx !== index)
-    throw new Error(`Journal index ${entry.idx} is not sequential at ${index}`);
-  if (!entry.tag.startsWith(`${String(index).padStart(4, "0")}_`)) {
-    throw new Error(`Migration tag ${entry.tag} does not match journal index ${index}`);
-  }
-  if (entry.when <= previousWhen)
-    throw new Error(`Migration timestamps are not increasing at ${entry.tag}`);
-  previousWhen = entry.when;
+let previousVersion = "";
+for (const file of files) {
+  const match = file.match(/^(\d{14})_[a-z0-9_]+\.sql$/);
+  if (!match) throw new Error(`Migration must use Supabase's timestamp_name.sql format: ${file}`);
+  if (match[1] <= previousVersion)
+    throw new Error(`Migration versions are not strictly increasing at ${file}`);
+  previousVersion = match[1];
 
-  const file = `${entry.tag}.sql`;
-  if (!files.includes(file)) throw new Error(`Journal entry has no SQL file: ${file}`);
   const sql = await readFile(join(migrationsDir, file), "utf8");
   if (!sql.trim()) throw new Error(`Migration is empty: ${file}`);
   allSql.push(sql);
 }
 
-const snapshots = (await readdir(metaDir)).filter((file) => file.endsWith("_snapshot.json"));
-if (snapshots.length) {
-  throw new Error("SQL-first migrations must not include stale, empty Drizzle schema snapshots");
-}
+const config = await readFile(join(root, "supabase", "config.toml"), "utf8");
+if (!/\[db\.seed\]\s*enabled\s*=\s*false/i.test(config))
+  throw new Error("Supabase automatic seed execution must remain disabled");
 
-const seed = await readFile(join(root, "drizzle", "seeds", "demo.sql"), "utf8");
+const seed = await readFile(join(root, "supabase", "seeds", "development", "demo.sql"), "utf8");
 if (!/insert\s+into\s+auth\.users/i.test(seed))
   throw new Error("Demo seed must retain its auth fixtures");
 if (allSql.some((sql) => /insert\s+into\s+auth\.users/i.test(sql))) {
   throw new Error("Demo accounts must remain outside automatic schema migrations");
 }
+if (files.some((file) => file.startsWith("seed") || file.includes("demo_data"))) {
+  throw new Error("General-purpose seed data must remain outside production migrations");
+}
 if (!/crypt\('Test1234!'/i.test(seed)) {
   throw new Error("All demo accounts must use the standardized development password");
+}
+if (
+  !/Demo fixtures partially exist; refusing to overwrite or duplicate existing records/.test(seed)
+) {
+  throw new Error("Demo seed must abort rather than overwrite or duplicate partial fixtures");
+}
+if (!/perform\s+public\._seed_performance_factors\(/i.test(seed)) {
+  throw new Error(
+    "Demo evaluation profile must include the complete current set of performance factors",
+  );
 }
 
 const accountsBlock = seed.match(
@@ -179,5 +178,5 @@ for (const name of [
 }
 
 console.log(
-  `Migration source check passed: ${entries.length} ordered SQL migrations, ${tables.size} RLS-protected public tables, ${functionHeaders.length} function definitions; key Supabase types match; demo fixtures remain separate.`,
+  `Migration source check passed: ${files.length} ordered Supabase SQL migrations, ${tables.size} RLS-protected public tables, ${functionHeaders.length} function definitions; key Supabase types match; automatic seeds are disabled and demo fixtures remain separate.`,
 );

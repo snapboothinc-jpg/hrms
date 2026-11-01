@@ -17,9 +17,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "db:migrate": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs migrate",
-    "db:check": "node scripts/check-migrations.mjs",
-    "db:seed:demo": "node --env-file-if-exists=.env scripts/seed-demo.mjs"
+    "db:check": "node scripts/database/check-migrations.mjs",
+    "db:migrations:list": "npx supabase migration list --linked",
+    "db:push:dry-run": "npx supabase db push --linked --dry-run",
+    "db:push": "npx supabase db push --linked",
+    "db:reset:local": "npx supabase db reset --local --no-seed",
+    "db:seed:demo": "node --env-file-if-exists=.env scripts/database/seed-demo.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -90,8 +93,6 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.2.0",
     "@playwright/test": "^1.64.1",
-    "drizzle-kit": "0.x",
-    "drizzle-orm": "0.x",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",

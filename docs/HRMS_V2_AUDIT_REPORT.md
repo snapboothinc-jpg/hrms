@@ -6,6 +6,13 @@
 **Evidence basis:** The initial report captured the then-current source, migrations, tests, and requirements available at that time. The later follow-up sections record the supplied authoritative specification, Phase 1/2 remediation, migration consolidation, and Phase 3 work.
 **Report status:** Sections A–J and the “Initial audit conclusion” preserve historical baseline findings; use the dated follow-up sections for the current source status. The complete `hrms v2 specification.txt` was supplied after the original audit and has since been reviewed. Hosted database/provider behavior remains unverified.
 
+**Database migration follow-up (2026-11-01):** After this historical audit, the
+reviewed SQL migration files were moved from Drizzle's migration directory to
+`supabase/migrations/` without regenerating their SQL. Supabase CLI is now the
+only migration manager; the Drizzle references below describe the earlier audit
+snapshot. See [the current runbook](./RUNBOOK.md#setup) for the active workflow
+and verified linked-project migration state.
+
 **Worktree integrity note:** A final status check found `.env` modified relative to Git, with all six Supabase configuration values changed. The audit did not intentionally edit `.env`; provenance is unknown. Its values were not printed, changed, or restored, to avoid discarding a potentially concurrent update. The pre-existing `src/routeTree.gen.ts` modification and untracked `package-lock.json` were also preserved. This unexpected environment change is not treated as an audit finding about the application.
 
 ## Evidence labels

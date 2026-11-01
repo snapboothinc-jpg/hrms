@@ -42,15 +42,13 @@ function Page() {
   const rows = a.data.rows;
   const complete = a.data.complete;
   const n = (s: string[]) => rows.filter((r) => s.includes(r.status)).length;
-  const buckets = [0, 20, 40, 60, 80].map((lo) => ({
-    range: `${lo}–${lo + 20}`,
-    count: rows.filter(
-      (r) =>
-        r.overall_score != null &&
-        r.overall_score >= lo &&
-        (lo === 80 ? r.overall_score <= 100 : r.overall_score < lo + 20),
-    ).length,
-  }));
+  const classificationCounts = rows.reduce((counts, row) => {
+    if (row.status === "approved" && row.classification) {
+      counts.set(row.classification, (counts.get(row.classification) ?? 0) + 1);
+    }
+    return counts;
+  }, new Map<string, number>());
+  const classifications = [...classificationCounts].map(([label, count]) => ({ label, count }));
   return (
     <div>
       <PageHeader
@@ -104,20 +102,25 @@ function Page() {
           </div>
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <Panel
-              title="Score distribution"
-              description="Submitted and approved evaluations (0–100)."
+              title="Finalized classification distribution"
+              description="Only administrator-configured performance classifications are counted."
             >
               {!complete ? (
                 <p className="text-sm text-muted-foreground">
                   The chart is hidden because the available evaluation rows are incomplete.
                 </p>
+              ) : classifications.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No configured classifications are available for finalized evaluations.
+                </p>
               ) : (
                 <div className="h-56">
                   <ResponsiveContainer>
-                    <BarChart data={buckets}>
+                    <BarChart data={classifications}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                       <XAxis
-                        dataKey="range"
+                        dataKey="label"
+                        interval={0}
                         tick={{ fill: "var(--color-muted-foreground)", fontSize: 12 }}
                       />
                       <YAxis

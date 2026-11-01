@@ -39,7 +39,8 @@ export const aiItemSchema = z
     recommendation_type: z.enum(["course", "learning_path", "training"]),
     resource_id: z.string().uuid(),
     rationale: z.string().min(3).max(4000),
-    expected_outcome: z.string().max(4000).optional(),
+    expected_outcome: z.string().min(3).max(4000),
+    assessment_method: z.string().min(3).max(4000),
     priority: z.enum(["high", "medium", "low"]).default("medium"),
   })
   .strict();
@@ -51,6 +52,20 @@ export type AiItem = z.infer<typeof aiItemSchema>;
 
 export interface AiContext {
   employee: { id: string; name: string; position: string; department: string };
+  performance_results: {
+    cycle: string;
+    score: number | null;
+    classification: string | null;
+    factors: {
+      title: string;
+      employee_rating: number | null;
+      supervisor_rating: number | null;
+      employee_comment: string | null;
+      supervisor_comment: string | null;
+    }[];
+  } | null;
+  development_comments: string[];
+  learning_history: { title: string; type: string; status: string; completed_at: string | null }[];
   gaps: {
     competency_id: string;
     competency: string;
@@ -68,8 +83,12 @@ function buildPrompt(ctx: AiContext): string {
     "You are an HR development advisor for a freight and logistics organization.",
     "Suggest learning resources for the employee's validated competency gaps.",
     "Rules: use ONLY resource IDs from the supplied resource list; one recommendation per gap at most;",
-    "prefer mandatory and safety-critical gaps; recommendation_type must match the resource's type.",
+    "prefer mandatory and safety-critical gaps; recommendation_type must match the resource's type;",
+    "never infer or change ratings; use performance results only to contextualize development needs.",
     "Employee: " + JSON.stringify(ctx.employee),
+    "Latest finalized performance results: " + JSON.stringify(ctx.performance_results),
+    "Development comments: " + JSON.stringify(ctx.development_comments),
+    "Previous learning history: " + JSON.stringify(ctx.learning_history),
     "Gaps: " + JSON.stringify(ctx.gaps),
     "Available resources: " + JSON.stringify(ctx.resources),
   ].join("\n");
@@ -88,6 +107,7 @@ const RECS_JSON_SCHEMA = {
           resource_id: { type: "string" },
           rationale: { type: "string" },
           expected_outcome: { type: "string" },
+          assessment_method: { type: "string" },
           priority: { type: "string", enum: ["high", "medium", "low"] },
         },
         required: [
@@ -96,6 +116,7 @@ const RECS_JSON_SCHEMA = {
           "resource_id",
           "rationale",
           "expected_outcome",
+          "assessment_method",
           "priority",
         ],
         additionalProperties: false,

@@ -1,3 +1,5 @@
+-- REFERENCE ONLY: historical draft superseded by
+-- supabase/migrations/20261030230602_learning_training_ai.sql. Never execute directly.
 -- Phase 5: learning management, training & development plans, AI recommendations, outbox.
 -- Conventions: writes via SECURITY DEFINER RPCs (self-authorizing), tables grant SELECT only,
 -- RLS on every table, audit via tg_audit trigger, demo rows flagged is_demo.
@@ -1251,7 +1253,8 @@ end $$;
 revoke execute on function public.process_outbox(int) from public, anon, authenticated;
 grant execute on function public.process_outbox(int) to service_role;
 
--- Demo fixtures are maintained only in drizzle/seeds/demo.sql.
+-- Development demo fixtures are maintained separately in
+-- supabase/seeds/development/demo.sql.
 
 -- lock down new function execution like previous migrations
 do $$ declare f record; begin

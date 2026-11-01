@@ -10,8 +10,14 @@ import {
   newProfileVersion,
   saveProfileVersion,
 } from "@/lib/api/actions.functions";
-import { profileContentSchema, itemTypes, ITEM_TYPE_LABELS } from "@/lib/schemas";
-import { canActivateProfile, weightTotal } from "@/lib/rules";
+import {
+  profileContentSchema,
+  itemTypes,
+  ITEM_TYPE_LABELS,
+  performanceFactorCodes,
+  performanceFactorTitles,
+} from "@/lib/schemas";
+import { canActivateEvaluationProfile } from "@/lib/rules";
 import { useAction } from "@/hooks/use-action";
 import { qk } from "@/lib/query-keys";
 import {
@@ -62,9 +68,21 @@ type Version = {
   status: string;
   effective_date: string | null;
   rating_scale_max: number;
+  scoring_method: "weighted" | "equal";
+  final_score_rule: "supervisor" | "self" | "average";
+  classification_thresholds: { label: string; min: number; max: number }[];
   instructions: string | null;
   version: number;
   activated_at: string | null;
+};
+type PerformanceFactor = {
+  factor_code: (typeof performanceFactorCodes)[number];
+  title: string;
+  description: string;
+  indicators: string[];
+  weight: number;
+  evidence_required: boolean;
+  sort_order: number;
 };
 
 function Page() {
@@ -90,7 +108,7 @@ function Page() {
           .select("*")
           .eq("profile_id", id)
           .order("version_number", { ascending: false }),
-      ) as Version[];
+      ) as unknown as Version[];
       return { p, versions };
     },
   });
@@ -154,59 +172,79 @@ function VersionEditor({ version }: { version: Version }) {
   const content = useQuery({
     queryKey: [...qk.perf.all, "version-content", version.id, version.version],
     queryFn: async () => {
-      const secs = check(
-        await supabase
+      const [sectionsResult, itemsResult, factorsResult] = await Promise.all([
+        supabase
           .from("evaluation_sections")
           .select("*")
           .eq("version_id", version.id)
           .order("sort_order"),
-      ) as { id: string; title: string; description: string | null }[];
-      const items = check(
-        await supabase
+        supabase
           .from("evaluation_items")
           .select("*")
           .eq("version_id", version.id)
           .order("sort_order"),
-      ) as (Item & { section_id: string; options: string[] })[];
-      return secs.map((s) => ({
-        title: s.title,
-        description: s.description ?? "",
-        items: items
-          .filter((i) => i.section_id === s.id)
-          .map((i) => ({
-            label: i.label,
-            help_text: i.help_text ?? "",
-            item_type: i.item_type,
-            weight: Number(i.weight),
-            options: i.options ?? [],
-            kpi_target: i.kpi_target ?? "",
-            kpi_unit: i.kpi_unit ?? "",
-            competency_id: i.competency_id ?? "",
-            evidence_required: i.evidence_required,
-            is_required: i.is_required,
-          })),
-      })) as Section[];
+        supabase
+          .from("evaluation_profile_factors")
+          .select("*")
+          .eq("version_id", version.id)
+          .order("sort_order"),
+      ]);
+      const secs = check(sectionsResult) as {
+        id: string;
+        title: string;
+        description: string | null;
+      }[];
+      const items = check(itemsResult) as (Item & { section_id: string; options: string[] })[];
+      const factors = check(factorsResult) as PerformanceFactor[];
+      return {
+        sections: secs.map((s) => ({
+          title: s.title,
+          description: s.description ?? "",
+          items: items
+            .filter((i) => i.section_id === s.id)
+            .map((i) => ({
+              label: i.label,
+              help_text: i.help_text ?? "",
+              item_type: i.item_type,
+              weight: Number(i.weight),
+              options: i.options ?? [],
+              kpi_target: i.kpi_target ?? "",
+              kpi_unit: i.kpi_unit ?? "",
+              competency_id: i.competency_id ?? "",
+              evidence_required: i.evidence_required,
+              is_required: i.is_required,
+            })),
+        })) as Section[],
+        factors,
+      };
     },
   });
   const comps = useQuery({ queryKey: qk.comp.library(), queryFn: fetchCompetencies });
   const [sections, setSections] = useState<Section[] | null>(null);
   const [meta, setMeta] = useState({
     rating_scale_max: version.rating_scale_max,
+    scoring_method: version.scoring_method,
+    final_score_rule: version.final_score_rule,
+    classification_thresholds: version.classification_thresholds ?? [],
     instructions: version.instructions ?? "",
     effective_date: version.effective_date ?? "",
   });
   const [dirty, setDirty] = useState(false);
   const [confirmActivate, setConfirmActivate] = useState(false);
+  const [factors, setFactors] = useState<PerformanceFactor[] | null>(null);
   useEffect(() => {
-    if (content.data && !sections) setSections(content.data);
-  }, [content.data, sections]);
+    if (content.data && !sections) setSections(content.data.sections);
+    if (content.data && !factors) setFactors(content.data.factors);
+  }, [content.data, sections, factors]);
   useBlocker({
     shouldBlockFn: () => dirty && !window.confirm("You have unsaved changes. Leave anyway?"),
     enableBeforeUnload: () => dirty,
   });
 
-  const all = useMemo(() => (sections ?? []).flatMap((s) => s.items), [sections]);
-  const total = weightTotal(all);
+  const factorWeightTotal = useMemo(
+    () => (factors ?? []).reduce((total, factor) => total + Number(factor.weight), 0),
+    [factors],
+  );
   const save = useAction(useServerFn(saveProfileVersion), {
     invalidate: [qk.perf.all],
     success: "Draft saved",
@@ -222,8 +260,16 @@ function VersionEditor({ version }: { version: Version }) {
     setSections((s) => fn(structuredClone(s ?? [])));
     setDirty(true);
   };
+  const updateFactor = (index: number, patch: Partial<PerformanceFactor>) => {
+    setFactors((current) =>
+      (current ?? []).map((factor, position) =>
+        position === index ? { ...factor, ...patch } : factor,
+      ),
+    );
+    setDirty(true);
+  };
   const doSave = () => {
-    const body = { ...meta, sections: sections ?? [] };
+    const body = { ...meta, sections: sections ?? [], performance_factors: factors ?? [] };
     const parsed = profileContentSchema.safeParse(body);
     if (!parsed.success) {
       toast.error(parsed.error.issues[0]?.message ?? "Check the profile items");
@@ -232,8 +278,8 @@ function VersionEditor({ version }: { version: Version }) {
     save.mutate({ version_id: version.id, version: version.version, content: parsed.data });
   };
 
-  if (content.isLoading || !sections) return <LoadingRows />;
-  const act = canActivateProfile(all);
+  if (content.isLoading || !sections || !factors) return <LoadingRows />;
+  const act = canActivateEvaluationProfile(factors, meta.scoring_method);
   return (
     <div className="space-y-4">
       <Panel>
@@ -253,17 +299,54 @@ function VersionEditor({ version }: { version: Version }) {
               }}
             />
           </Field>
+          <Field label="Factor weighting" htmlFor="scoring-method">
+            <NativeSelect
+              id="scoring-method"
+              value={meta.scoring_method}
+              disabled={!editable}
+              onChange={(e) => {
+                setMeta({ ...meta, scoring_method: e.target.value as "equal" | "weighted" });
+                setDirty(true);
+              }}
+            >
+              <option value="equal">Equal weighting</option>
+              <option value="weighted">Configured factor weights</option>
+            </NativeSelect>
+          </Field>
+          <Field label="Final score rule" htmlFor="final-score-rule">
+            <NativeSelect
+              id="final-score-rule"
+              value={meta.final_score_rule}
+              disabled={!editable}
+              onChange={(e) => {
+                setMeta({
+                  ...meta,
+                  final_score_rule: e.target.value as "supervisor" | "self" | "average",
+                });
+                setDirty(true);
+              }}
+            >
+              <option value="supervisor">Supervisor score</option>
+              <option value="self">Employee self-evaluation score</option>
+              <option value="average">Average of both scores</option>
+            </NativeSelect>
+          </Field>
           <div className="md:col-span-2">
-            <p className="font-data text-sm font-semibold">Weight total</p>
+            <p className="font-data text-sm font-semibold">
+              {meta.scoring_method === "weighted" ? "Configured weight total" : "Weights ignored"}
+            </p>
             <p
               className={cn(
                 "font-data text-2xl font-bold",
-                total === 100 ? "text-success" : "text-destructive",
+                meta.scoring_method === "equal" || Math.round(factorWeightTotal * 100) / 100 === 100
+                  ? "text-success"
+                  : "text-destructive",
               )}
               aria-live="polite"
             >
-              {total}%{" "}
-              {total === 100 ? (
+              {factorWeightTotal}%{" "}
+              {meta.scoring_method === "equal" ||
+              Math.round(factorWeightTotal * 100) / 100 === 100 ? (
                 <CheckCircle2 className="inline size-5" aria-label="valid" />
               ) : (
                 <span className="text-sm">(must be 100%)</span>
@@ -283,6 +366,177 @@ function VersionEditor({ version }: { version: Version }) {
               />
             </Field>
           </div>
+        </div>
+        <div className="mt-4 border-t pt-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div>
+              <h3 className="font-semibold">Performance classifications</h3>
+              <p className="text-sm text-muted-foreground">
+                Optional 1-5 score ranges. No labels are applied until HR configures them.
+              </p>
+            </div>
+            {editable && meta.classification_thresholds.length < 5 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setMeta({
+                    ...meta,
+                    classification_thresholds: [
+                      ...meta.classification_thresholds,
+                      { label: "", min: 1, max: 5 },
+                    ],
+                  });
+                  setDirty(true);
+                }}
+              >
+                <Plus /> Add range
+              </Button>
+            )}
+          </div>
+          <div className="space-y-2">
+            {meta.classification_thresholds.map((threshold, index) => (
+              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_8rem_8rem_auto]">
+                <Input
+                  aria-label={`Classification ${index + 1} name`}
+                  placeholder="Classification name"
+                  value={threshold.label}
+                  disabled={!editable}
+                  onChange={(e) => {
+                    const ranges = [...meta.classification_thresholds];
+                    ranges[index] = { ...threshold, label: e.target.value };
+                    setMeta({ ...meta, classification_thresholds: ranges });
+                    setDirty(true);
+                  }}
+                />
+                <Input
+                  aria-label={`Classification ${index + 1} minimum`}
+                  type="number"
+                  min={1}
+                  max={5}
+                  step={0.01}
+                  value={threshold.min}
+                  disabled={!editable}
+                  onChange={(e) => {
+                    const ranges = [...meta.classification_thresholds];
+                    ranges[index] = { ...threshold, min: Number(e.target.value) };
+                    setMeta({ ...meta, classification_thresholds: ranges });
+                    setDirty(true);
+                  }}
+                />
+                <Input
+                  aria-label={`Classification ${index + 1} maximum`}
+                  type="number"
+                  min={1}
+                  max={5}
+                  step={0.01}
+                  value={threshold.max}
+                  disabled={!editable}
+                  onChange={(e) => {
+                    const ranges = [...meta.classification_thresholds];
+                    ranges[index] = { ...threshold, max: Number(e.target.value) };
+                    setMeta({ ...meta, classification_thresholds: ranges });
+                    setDirty(true);
+                  }}
+                />
+                {editable && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove classification ${index + 1}`}
+                    onClick={() => {
+                      setMeta({
+                        ...meta,
+                        classification_thresholds: meta.classification_thresholds.filter(
+                          (_, i) => i !== index,
+                        ),
+                      });
+                      setDirty(true);
+                    }}
+                  >
+                    <Trash2 />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="mt-4 space-y-3 border-t pt-4">
+          <div>
+            <h3 className="font-semibold">Ten performance factors</h3>
+            <p className="text-sm text-muted-foreground">
+              Configure the position-specific indicators and evidence expectations for each factor.
+              Only these ratings contribute to the performance score.
+            </p>
+          </div>
+          {factors.map((factor, index) => (
+            <div key={factor.factor_code} className="rounded-md border bg-background p-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h4 className="font-semibold">
+                  {performanceFactorTitles[factor.factor_code]}
+                  {factor.factor_code === "safety_consciousness_equipment" && (
+                    <Tag tone="warning">Safety-critical</Tag>
+                  )}
+                </h4>
+                {meta.scoring_method === "weighted" && (
+                  <Field label="Weight %" htmlFor={`factor-weight-${index}`}>
+                    <Input
+                      id={`factor-weight-${index}`}
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.01}
+                      value={factor.weight}
+                      disabled={!editable}
+                      onChange={(e) => updateFactor(index, { weight: Number(e.target.value) })}
+                      className="w-28"
+                    />
+                  </Field>
+                )}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Field label="Description" htmlFor={`factor-description-${index}`}>
+                  <Textarea
+                    id={`factor-description-${index}`}
+                    value={factor.description}
+                    maxLength={2000}
+                    disabled={!editable}
+                    onChange={(e) => updateFactor(index, { description: e.target.value })}
+                  />
+                </Field>
+                <Field
+                  label="Position-specific indicators (one per line)"
+                  htmlFor={`factor-indicators-${index}`}
+                >
+                  <Textarea
+                    id={`factor-indicators-${index}`}
+                    value={factor.indicators.join("\n")}
+                    disabled={!editable}
+                    onChange={(e) =>
+                      updateFactor(index, {
+                        indicators: e.target.value
+                          .split("\n")
+                          .map((indicator) => indicator.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                  />
+                </Field>
+              </div>
+              <label className="mt-3 flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={factor.evidence_required}
+                  disabled={!editable}
+                  onCheckedChange={(checked) =>
+                    updateFactor(index, { evidence_required: checked === true })
+                  }
+                />
+                Supporting evidence required to submit
+              </label>
+            </div>
+          ))}
         </div>
         {!editable && (
           <p className="mt-3 text-sm text-muted-foreground">

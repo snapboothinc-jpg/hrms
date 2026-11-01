@@ -7,7 +7,7 @@
 | VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY | browser (public) | Supabase client                                                                                             |
 | SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY           | server           | auth middleware, health check                                                                               |
 | SUPABASE_SERVICE_ROLE_KEY                        | server only      | account creation/deactivation (admin), file type rejection cleanup, signed evidence URLs, outbox processing |
-| DATABASE_URL                                     | migration only   | Direct PostgreSQL connection for Drizzle migrations                                                         |
+| DATABASE_URL                                     | seed only        | Direct PostgreSQL connection for explicitly requested development fixture seeding                           |
 | GEMINI_API_KEY                                   | server only      | Required default provider credential for Gemini 2.5 Flash                                                   |
 | AI_MODEL                                         | server only      | Optional Gemini model override; default is `gemini-2.5-flash`                                               |
 | OUTBOX_PROCESSOR_SECRET                          | server only      | bearer secret for the outbox processing endpoint                                                            |
@@ -18,51 +18,66 @@ page names a missing variable but never its value.
 
 ## Setup
 
-1. Use a clean, isolated Supabase development database. Set `DATABASE_URL` to its direct Postgres connection string and run `npm run db:check`, then `npm run db:migrate`. This invokes Drizzle Kit's SQL migrator, which executes the SQL files in `drizzle/migrations/` in `_journal.json` order. Do not point the command at production during development.
-2. The schema is maintained as reviewed SQL; `drizzle/schema.ts` is intentionally empty, and Drizzle snapshots are not used as schema authority. Add schema changes as reviewed SQL, then update the journal and run `npm run db:check`.
-3. Migration 0000 is the base identity/organization schema. The original source was consolidated into seven domain migrations; `0007_personal_goals.sql`, `0008_report_workspace.sql`, and `0009_phase3_approvals_qualification.sql` are additive Phase 3 changes for employee-owned goals, saved reports/export metadata, approval and qualification workflows, and learning/reassessment deadlines. Migration 0005 blocks before altering the fixed 1–5 scale if existing scores/snapshots require review. Migration 0003 sets Gemini-only provider configuration.
-4. Demo fixtures are not applied by `db:migrate`. For an isolated, empty development database only, set `HRMS_SEED_ENV=development` and run `npm run db:seed:demo` (requires `psql` and `DATABASE_URL`). The seed includes test-account credentials and must never be run against production.
+1. Supabase CLI is the sole migration manager. Run `npm run db:check` and inspect `npm run db:migrations:list`. For local initialization, `npx supabase start` applies `supabase/migrations/`; for a linked database, review `npm run db:push:dry-run` before the deliberate `npm run db:push`. Never use linked resets in deployment or point unreviewed migrations at production.
+2. Schema changes are reviewed SQL migrations in `supabase/migrations/`, ordered by their 14-digit Supabase migration versions. The former Drizzle journal timestamps were preserved as these versions; SQL bodies were moved without regeneration. Drizzle ORM and Drizzle Kit are not used by application code and are no longer part of the migration workflow.
+3. Migration 0000 is the base identity/organization schema. The original source was consolidated into seven domain migrations; `0007_personal_goals.sql`, `0008_report_workspace.sql`, and `0009_phase3_approvals_qualification.sql` are additive Phase 3 changes for employee-owned goals, saved reports/export metadata, approval and qualification workflows, and learning/reassessment deadlines. Migration 0005 blocks before altering the fixed 1–5 scale if existing scores/snapshots require review. Migration 0003 sets Gemini-only provider configuration. Migration 0019 adds versioned, position-specific performance factors and independent self/supervisor scoring; configure a profile and its scoring/classification rules before activating it for a cycle.
+4. Supabase CLI seed execution is explicitly disabled in `supabase/config.toml`; even local reset is invoked with `--no-seed`. The development demo seed is in `supabase/seeds/development/demo.sql`, outside migrations. On an isolated database, set `HRMS_SEED_ENV=development` and run `npm run db:seed:demo` (requires `psql` and `DATABASE_URL`). Loopback database hosts are allowed directly; a remote development host additionally requires `HRMS_SEED_REMOTE_CONFIRM` to exactly match its hostname. The SQL seed is repeat-safe for a complete fixture set and aborts if it finds a partial/conflicting fixture. Never seed production.
 5. Seed accounts use `firstname.role+priority@gmail.com` addresses and the shared development password `Test1234!`. The seed contains seven role accounts and one Logistics Department. Remove demo data by signing in as a non-demo Super Admin and calling `remove_demo_data()`. `reset_demo_data()` clears mutable demo rows but does not recreate them; rebuild the isolated database and rerun the seed to restore a complete workflow.
 
-| Role | Seed account |
-| --- | --- |
-| Super Admin | `victor.superadmin+priority@gmail.com` |
-| Admin | `nina.admin+priority@gmail.com` |
-| HR Administrator | `liza.hradmin+priority@gmail.com` |
-| Department Head | `maria.depthead+priority@gmail.com` |
-| Supervisor | `jose.supervisor+priority@gmail.com` |
-| Employee | `ana.employee+priority@gmail.com` |
-| Operations Manager | `carlo.opsmanager+priority@gmail.com` |
+| Role               | Seed account                           |
+| ------------------ | -------------------------------------- |
+| Super Admin        | `victor.superadmin+priority@gmail.com` |
+| Admin              | `nina.admin+priority@gmail.com`        |
+| HR Administrator   | `liza.hradmin+priority@gmail.com`      |
+| Department Head    | `maria.depthead+priority@gmail.com`    |
+| Supervisor         | `jose.supervisor+priority@gmail.com`   |
+| Employee           | `ana.employee+priority@gmail.com`      |
+| Operations Manager | `carlo.opsmanager+priority@gmail.com`  |
 
 The shared password for every account in this table is `Test1234!`; use it only in isolated development environments.
 
-| Migration                                   | Responsibility                                                                                                                          | Consolidated source                     |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `0000_base_identity_organization.sql`       | Base identity, roles, organization, shared primitives, baseline RLS/grants                                                              | `0000`                                  |
-| `0001_performance_competency.sql`           | Performance/competency schema and business operations                                                                                   | `0001`, `0002`                          |
-| `0002_storage_security.sql`                 | Evidence bucket policies, audit-history read policy, trigger search-path fixes                                                          | `0003` storage policies, `0004`, `0005` |
-| `0003_learning_training_ai.sql`             | Learning/training/AI/outbox schema and operations, Gemini-only settings                                                                 | `0006`–`0008`, `0013`                   |
-| `0004_succession_recognition_reporting.sql` | Succession, recognition and scoped report operations                                                                                    | `0010`                                  |
-| `0005_hrms_v2_remediation.sql`              | Evaluation acknowledgement/scale, course review, REST PATCH, scoped nav context                                                         | `0012`                                  |
-| `0006_demo_lifecycle.sql`                   | Guarded demo removal/reset functions (function definitions only)                                                                        | `0011` lifecycle functions              |
-| `0007_personal_goals.sql`                   | Employee-owned personal goals, review/progress lifecycle, scoped RLS, audit and idempotent write functions                              | Phase 3 continuation                    |
-| `0008_report_workspace.sql`                 | Owner-scoped saved report definitions, RLS-scoped export history, audit logging and idempotent writes                                   | Phase 3 continuation                    |
-| `0009_phase3_approvals_qualification.sql`   | Development/succession approvals, candidate qualifications, course due dates, reassessment dates, guarded transitions and notifications | Phase 3 continuation                    |
-| `0018_compact_demo_reset.sql`               | Remove obsolete fixture reseeding from `reset_demo_data()`; reset now clears mutable demo rows only                            | Current seed lifecycle                  |
+| Supabase migration file                                 | Classification and responsibility                                                            |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `20261030230559_base_identity_organization.sql`         | Canonical schema: base identity, roles, organization, shared primitives, baseline RLS/grants |
+| `20261030230600_performance_competency.sql`             | Canonical schema/functions: performance and competency                                       |
+| `20261030230601_storage_security.sql`                   | Canonical policies and function hardening: evidence storage and audit history                |
+| `20261030230602_learning_training_ai.sql`               | Canonical schema/functions and required defaults: learning, training, AI, outbox             |
+| `20261030230603_succession_recognition_reporting.sql`   | Canonical schema/functions: succession, recognition and scoped reporting                     |
+| `20261030230604_hrms_v2_remediation.sql`                | Canonical forward changes: evaluation/course operations and permissions                      |
+| `20261030230605_demo_lifecycle.sql`                     | Canonical functions only: guarded demo removal/reset; no fixtures                            |
+| `20261030230606_personal_goals.sql`                     | Canonical schema/functions: employee goals and review lifecycle                              |
+| `20261030230607_report_workspace.sql`                   | Canonical schema/functions: saved reports and export history                                 |
+| `20261030230608_phase3_approvals_qualification.sql`     | Canonical schema/transitions: approvals, qualifications, course and reassessment deadlines   |
+| `20261030230609_policy_and_foreign_key_indexes.sql`     | Canonical indexes and policy optimization                                                    |
+| `20261030230610_fix_linter_function_errors.sql`         | Canonical forward function corrections                                                       |
+| `20261030230611_fix_demo_cleanup_ambiguous_columns.sql` | Canonical forward demo-cleanup function correction                                           |
+| `20261030230612_restrict_client_database_grants.sql`    | Canonical grants: authenticated read-only tables/sequences                                   |
+| `20261030230613_restrict_default_function_execute.sql`  | Canonical default function privileges                                                        |
+| `20261030230614_bootstrap_initial_super_admin.sql`      | Canonical guarded bootstrap function                                                         |
+| `20261030230615_mark_demo_fixtures.sql`                 | Canonical demo lifecycle function version                                                    |
+| `20261030230616_mark_demo_reporting_lines.sql`          | Canonical replacement adding reporting-line fixture marking                                  |
+| `20261030230617_compact_demo_reset.sql`                 | Canonical forward demo reset function correction                                             |
+| `20261030230618_performance_evaluation_factors.sql`     | Canonical schema/functions: versioned factors, responses, scoring                            |
 
-`drizzle/seeds/demo.sql` contains the separated, minimal Logistics Department development
-fixtures. It is intentionally not listed in the migration journal. Each seeded role is
+`supabase/seeds/development/demo.sql` contains the separated, minimal Logistics Department development
+fixtures. It is not a migration and is disabled in Supabase CLI seed configuration. Each seeded role is
 assigned by the permissions catalogue from the migrations; the shared fixture password
 is `Test1234!`. Never use this password outside isolated development data.
-The prior Drizzle snapshots had empty schemas and did not represent the SQL objects;
-they were removed. The SQL journal is the source used by `drizzle-kit migrate`.
-`npm run db:check` validates journal/file parity, order, table RLS enablement,
+The previous Drizzle snapshots were empty and did not represent the SQL objects.
+`npm run db:check` validates migration naming/order, seed separation, table RLS enablement,
 SECURITY DEFINER search paths, no direct authenticated table-write grants, and key
 generated Supabase types. It is a static check, not a substitute for running the
 migrations in isolated PostgreSQL/Supabase.
-`docs/pending/phase5_learning_training_ai.sql` is a non-executable reference draft;
-it is not part of the migration journal. Apply future schema changes only through
-the canonical migrations under `drizzle/migrations/`.
+`docs/pending/phase5_learning_training_ai.sql` is a non-executable reference draft superseded by
+`20261030230602_learning_training_ai.sql`; it is not part of the migration sequence. Apply future schema changes only through
+the canonical migrations under `supabase/migrations/`.
+
+The linked project was inspected read-only during standardization: Supabase reported no
+migration rows, no Supabase/Drizzle migration tracking tables were present, and the checked core tables
+(`profiles`, `employees`, `role_permissions`, and `evaluation_profile_factors`) did not
+exist. This is evidence for that linked project only; migration status in any other
+environment remains unknown. No migration was pushed. Local Postgres/Supabase replay
+must be run before deployment.
 
 ## Health
 

@@ -4,7 +4,56 @@ declare
   pw text := extensions.crypt('Test1234!', extensions.gen_salt('bf'));
   u record;
   route_gap_snapshot uuid;
+  account_ids uuid[] := ARRAY[
+    '00000000-0000-4000-a000-000000000001','00000000-0000-4000-a000-000000000002',
+    '00000000-0000-4000-a000-000000000003','00000000-0000-4000-a000-000000000004',
+    '00000000-0000-4000-a000-000000000005','00000000-0000-4000-a000-000000000006',
+    '00000000-0000-4000-a000-000000000007'
+  ]::uuid[];
+  employee_ids uuid[] := ARRAY[
+    '00000000-0000-4000-d000-000000000001','00000000-0000-4000-d000-000000000002',
+    '00000000-0000-4000-d000-000000000003','00000000-0000-4000-d000-000000000004',
+    '00000000-0000-4000-d000-000000000005','00000000-0000-4000-d000-000000000006',
+    '00000000-0000-4000-d000-000000000007','00000000-0000-4000-d000-000000000008'
+  ]::uuid[];
+  position_ids uuid[] := ARRAY[
+    '00000000-0000-4000-c000-000000000001','00000000-0000-4000-c000-000000000002',
+    '00000000-0000-4000-c000-000000000003','00000000-0000-4000-c000-000000000004',
+    '00000000-0000-4000-c000-000000000005','00000000-0000-4000-c000-000000000006'
+  ]::uuid[];
+  existing_accounts integer;
+  existing_profiles integer;
+  existing_employees integer;
+  existing_departments integer;
+  existing_positions integer;
 begin
+  IF EXISTS (
+    SELECT 1 FROM auth.users
+     WHERE id = ANY(account_ids)
+        OR email = ANY(ARRAY[
+          'victor.superadmin+priority@gmail.com','nina.admin+priority@gmail.com',
+          'liza.hradmin+priority@gmail.com','maria.depthead+priority@gmail.com',
+          'jose.supervisor+priority@gmail.com','ana.employee+priority@gmail.com',
+          'carlo.opsmanager+priority@gmail.com'
+        ])
+  ) OR EXISTS (SELECT 1 FROM public.profiles WHERE id = ANY(account_ids))
+    OR EXISTS (SELECT 1 FROM public.employees WHERE id = ANY(employee_ids))
+    OR EXISTS (SELECT 1 FROM public.departments WHERE id = '00000000-0000-4000-b000-000000000001')
+    OR EXISTS (SELECT 1 FROM public.positions WHERE id = ANY(position_ids)) THEN
+    SELECT count(*) INTO existing_accounts FROM auth.users WHERE id = ANY(account_ids);
+    SELECT count(*) INTO existing_profiles FROM public.profiles WHERE id = ANY(account_ids) AND is_demo;
+    SELECT count(*) INTO existing_employees FROM public.employees WHERE id = ANY(employee_ids) AND is_demo;
+    SELECT count(*) INTO existing_departments FROM public.departments
+     WHERE id = '00000000-0000-4000-b000-000000000001' AND is_demo;
+    SELECT count(*) INTO existing_positions FROM public.positions WHERE id = ANY(position_ids) AND is_demo;
+
+    IF existing_accounts = 7 AND existing_profiles = 7 AND existing_employees = 8
+       AND existing_departments = 1 AND existing_positions = 6 THEN
+      RETURN;
+    END IF;
+    RAISE EXCEPTION 'Demo fixtures partially exist; refusing to overwrite or duplicate existing records';
+  END IF;
+
   for u in
     select * from (values
       ('00000000-0000-4000-a000-000000000001'::uuid,'victor.superadmin+priority@gmail.com','Victor Tan','super_admin'::public.app_role),
@@ -89,7 +138,8 @@ begin
   insert into public.evaluation_profile_versions(
     id,profile_id,position_id,version_number,status,effective_date,instructions,activated_at,is_demo
   ) values
-    ('00000000-0000-4000-9100-000000000001','00000000-0000-4000-9000-000000000001','00000000-0000-4000-c000-000000000003',1,'active','2026-01-01','Rate each competency against the proficiency framework and attach evidence.',now(),true);
+    ('00000000-0000-4000-9100-000000000001','00000000-0000-4000-9000-000000000001','00000000-0000-4000-c000-000000000003',1,'draft','2026-01-01','Rate each competency against the proficiency framework and attach evidence.',null,true);
+  perform public._seed_performance_factors('00000000-0000-4000-9100-000000000001');
   insert into public.evaluation_sections(id,version_id,title,description,sort_order) values
     ('00000000-0000-4000-9200-000000000001','00000000-0000-4000-9100-000000000001','Operational competencies','Performance against current logistics role requirements.',0);
   insert into public.evaluation_items(
@@ -97,6 +147,9 @@ begin
   ) values
     ('00000000-0000-4000-9100-000000000001','00000000-0000-4000-9200-000000000001','Route planning','rating',50,'00000000-0000-4000-f000-000000000002',true,true,0),
     ('00000000-0000-4000-9100-000000000001','00000000-0000-4000-9200-000000000001','Cargo safety','rating',50,'00000000-0000-4000-f000-000000000001',true,true,1);
+  update public.evaluation_profile_versions
+     set status='active',activated_at=now()
+   where id='00000000-0000-4000-9100-000000000001';
   insert into public.evaluation_cycles(
     id,name,description,period_start,period_end,due_date,self_evaluation,status,is_demo
   ) values
@@ -149,13 +202,17 @@ begin
   insert into public.development_plans(
     id,employee_id,title,objectives,responsible_id,target_date,status,is_demo
   ) values
-    ('00000000-0000-4000-c800-000000000001','00000000-0000-4000-d000-000000000003','Route Planning Development Plan','Close the route-planning gap through targeted learning and supervised practice.','00000000-0000-4000-d000-000000000002','2026-09-30','completed',true);
+    ('00000000-0000-4000-c800-000000000001','00000000-0000-4000-d000-000000000003','Route Planning Development Plan','Close the route-planning gap through targeted learning and supervised practice.','00000000-0000-4000-d000-000000000002','2026-09-30','draft',true);
   insert into public.development_plan_items(
     id,plan_id,item_type,title,description,competency_id,course_id,training_session_id,
     gap_snapshot_id,ai_recommendation_id,priority,target_date,status,completed_at,evidence,is_demo
   ) values
     ('00000000-0000-4000-c900-000000000001','00000000-0000-4000-c800-000000000001','course','Complete Route Planning Fundamentals','Complete the recommended course for the identified level-2 to level-3 competency gap.','00000000-0000-4000-f000-000000000002','00000000-0000-4000-c100-000000000001',null,route_gap_snapshot,'00000000-0000-4000-cc00-000000000001','high','2026-09-20','completed',now(),'Course completed and competency reassessed.',true),
     ('00000000-0000-4000-c900-000000000002','00000000-0000-4000-c800-000000000001','training','Attend Route Planning Workshop','Apply route-planning techniques with the operations team.','00000000-0000-4000-f000-000000000002',null,'00000000-0000-4000-cb00-000000000001',route_gap_snapshot,'00000000-0000-4000-cc00-000000000001','high','2026-09-25','completed',now(),'Attended and passed the practical workshop.',true);
+  update public.development_plans
+     set status='completed',approval_status='approved',
+         reviewed_by='00000000-0000-4000-a000-000000000003',reviewed_at=now()
+   where id='00000000-0000-4000-c800-000000000001';
   insert into public.course_enrollments(
     id,course_id,employee_id,source,development_plan_item_id,status,assigned_by,assigned_at,completed_at,is_demo
   ) values
@@ -181,7 +238,7 @@ begin
     is_reassessment,status,reviewer_id,reviewed_at,is_demo
   ) values
     ('00000000-0000-4000-fa00-000000000004','00000000-0000-4000-d000-000000000003','00000000-0000-4000-f000-000000000002','00000000-0000-4000-a000-000000000005','00000000-0000-4000-9300-000000000001','2026-09-26',3,'After course completion and workshop, planned multi-stop routes met delivery windows without correction.',true,'approved','00000000-0000-4000-a000-000000000003',now(),true),
-    ('00000000-0000-4000-fa00-000000000005','00000000-0000-4000-d000-000000000004','00000000-0000-4000-f000-000000000001','00000000-0000-4000-a000-000000000005','00000000-0000-4000-9300-000000000001','2026-08-20',2,'Initial load-securing assessment identifies a safety gap.','approved','00000000-0000-4000-a000-000000000003',now(),true);
+    ('00000000-0000-4000-fa00-000000000005','00000000-0000-4000-d000-000000000004','00000000-0000-4000-f000-000000000001','00000000-0000-4000-a000-000000000005','00000000-0000-4000-9300-000000000001','2026-08-20',2,'Initial load-securing assessment identifies a safety gap.',false,'approved','00000000-0000-4000-a000-000000000003',now(),true);
   insert into public.competency_reassessments(employee_id,competency_id,session_id,assessment_id,notes,is_demo) values
     ('00000000-0000-4000-d000-000000000003','00000000-0000-4000-f000-000000000002','00000000-0000-4000-cb00-000000000001','00000000-0000-4000-fa00-000000000004','Level 3 was verified after the linked course and training workshop.',true);
   perform public._snapshot_gaps('00000000-0000-4000-d000-000000000003');

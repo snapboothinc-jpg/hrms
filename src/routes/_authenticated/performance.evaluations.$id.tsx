@@ -4,16 +4,18 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, RotateCcw, Save, Send, Undo2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { check, empName } from "@/lib/data";
+import { check, empName, fetchGaps, type GapRow } from "@/lib/data";
 import {
   acknowledgeEvaluation,
   addEvaluationEvidence,
+  addPerformanceFactorEvidence,
   reopenEvaluation,
   reviewEvaluation,
   saveEvaluation,
   submitEvaluation,
 } from "@/lib/api/actions.functions";
-import { computeScore } from "@/lib/rules";
+import { computePerformanceScore } from "@/lib/rules";
+import { performanceFactorCodes } from "@/lib/schemas";
 import { useAction } from "@/hooks/use-action";
 import { usePermissions } from "@/hooks/use-me";
 import { qk } from "@/lib/query-keys";
@@ -65,7 +67,19 @@ type Snapshot = {
   version_number: number;
   rating_scale_max: number;
   instructions: string | null;
+  scoring_method?: "weighted" | "equal";
+  final_score_rule?: "supervisor" | "self" | "average";
+  classification_thresholds?: { label: string; min: number; max: number }[];
+  performance_factors?: SnapFactor[];
   sections: { id: string; title: string; description: string | null; items: SnapItem[] }[];
+};
+type SnapFactor = {
+  factor_code: (typeof performanceFactorCodes)[number];
+  title: string;
+  description: string;
+  indicators: string[];
+  weight: number;
+  evidence_required: boolean;
 };
 type Resp = {
   item_id: string;
@@ -74,6 +88,12 @@ type Resp = {
   text_value: string | null;
   choice_values: string[] | null;
   kpi_actual: number | null;
+  comment: string | null;
+};
+type FactorResp = {
+  factor_code: (typeof performanceFactorCodes)[number];
+  respondent: "self" | "evaluator";
+  rating: number | null;
   comment: string | null;
 };
 type A = {
@@ -91,6 +111,10 @@ type A = {
   acknowledged_by: string | null;
   acknowledgement_comment: string | null;
   overall_score: number | null;
+  self_score: number | null;
+  supervisor_score: number | null;
+  final_score: number | null;
+  classification: string | null;
   overall_comment: string | null;
   reopen_reason: string | null;
   employee: { first_name: string; last_name: string; employee_code: string } | null;
@@ -114,27 +138,31 @@ function Page() {
           .maybeSingle(),
       ) as unknown as A | null;
       if (!a) return null;
-      const [responses, evidence, reviews] = await Promise.all([
+      const [responses, evidence, factorResponses, reviews] = await Promise.all([
         supabase.from("evaluation_responses").select("*").eq("assignment_id", id),
         supabase
           .from("evaluation_evidence")
           .select("*, file:file_metadata(original_name)")
           .eq("assignment_id", id)
           .order("created_at"),
+        supabase.from("evaluation_factor_responses").select("*").eq("assignment_id", id),
         supabase
           .from("evaluation_reviews")
           .select("*")
           .eq("assignment_id", id)
           .order("created_at", { ascending: false }),
       ]);
+      const compGaps = await fetchGaps({ employee: a.employee_id });
       return {
         a,
         responses: check(responses) as Resp[],
+        factorResponses: check(factorResponses) as FactorResp[],
         evidence: check(evidence) as unknown as {
           id: string;
           file_id: string | null;
           note: string | null;
           item_id: string | null;
+          factor_code: string | null;
           created_at: string;
           file: { original_name: string } | null;
         }[],
@@ -144,6 +172,7 @@ function Page() {
           comments: string | null;
           created_at: string;
         }[],
+        compGaps: compGaps as GapRow[],
       };
     },
   });
@@ -184,6 +213,7 @@ function Page() {
       data={q.data}
       respondent={respondent}
       canReview={canReview}
+      canViewDraftSupervisorScore={canReview || isEvaluator}
       canReopen={canReopen}
       canAcknowledge={canAcknowledge}
       showEvaluatorToEmployee={!isEmployee || a.status === "approved"}
@@ -195,6 +225,7 @@ function EvaluationView({
   data,
   respondent,
   canReview,
+  canViewDraftSupervisorScore,
   canReopen,
   canAcknowledge,
   showEvaluatorToEmployee,
@@ -202,30 +233,41 @@ function EvaluationView({
   data: {
     a: A;
     responses: Resp[];
+    factorResponses: FactorResp[];
+    compGaps: GapRow[];
     evidence: {
       id: string;
       file_id: string | null;
       note: string | null;
       created_at: string;
+      factor_code: string | null;
       file: { original_name: string } | null;
     }[];
     reviews: { id: string; decision: string; comments: string | null; created_at: string }[];
   };
   respondent: "self" | "evaluator" | null;
   canReview: boolean;
+  canViewDraftSupervisorScore: boolean;
   canReopen: boolean;
   canAcknowledge: boolean;
   showEvaluatorToEmployee: boolean;
 }) {
   const { a } = data;
   const snap = a.snapshot;
-  const allItems = useMemo(() => snap.sections.flatMap((s) => s.items), [snap]);
   const initial = useMemo(() => {
     const m: Record<string, Resp> = {};
     data.responses.filter((r) => r.respondent === respondent).forEach((r) => (m[r.item_id] = r));
     return m;
   }, [data.responses, respondent]);
+  const initialFactors = useMemo(() => {
+    const values: Record<string, Partial<FactorResp>> = {};
+    data.factorResponses
+      .filter((response) => response.respondent === respondent)
+      .forEach((response) => (values[response.factor_code] = response));
+    return values;
+  }, [data.factorResponses, respondent]);
   const [vals, setVals] = useState<Record<string, Partial<Resp>>>(initial);
+  const [factorVals, setFactorVals] = useState<Record<string, Partial<FactorResp>>>(initialFactors);
   const [overall, setOverall] = useState(a.overall_comment ?? "");
   const [dirty, setDirty] = useState(false);
   const [confirm, setConfirm] = useState<
@@ -233,11 +275,13 @@ function EvaluationView({
   >(null);
   const [comment, setComment] = useState("");
   const [note, setNote] = useState("");
+  const [factorEvidenceNotes, setFactorEvidenceNotes] = useState<Record<string, string>>({});
   useBlocker({
     shouldBlockFn: () => dirty && !window.confirm("You have unsaved changes. Leave anyway?"),
     enableBeforeUnload: () => dirty,
   });
   useEffect(() => setVals(initial), [initial]);
+  useEffect(() => setFactorVals(initialFactors), [initialFactors]);
 
   const inv = [qk.perf.all, qk.shared.approvals()];
   const save = useAction(useServerFn(saveEvaluation), {
@@ -284,11 +328,45 @@ function EvaluationView({
     success: "Evidence added",
     onSuccess: () => setNote(""),
   });
+  const addFactorEv = useAction(useServerFn(addPerformanceFactorEvidence), {
+    idempotent: true,
+    invalidate: inv,
+    success: "Performance factor evidence added",
+    onSuccess: () => setNote(""),
+  });
 
   const set = (itemId: string, patch: Partial<Resp>) => {
     setVals((v) => ({ ...v, [itemId]: { ...v[itemId], ...patch } }));
     setDirty(true);
   };
+  const setFactor = (
+    factorCode: (typeof performanceFactorCodes)[number],
+    patch: Partial<FactorResp>,
+  ) => {
+    setFactorVals((values) => ({
+      ...values,
+      [factorCode]: { ...values[factorCode], factor_code: factorCode, ...patch },
+    }));
+    setDirty(true);
+  };
+  const saveFactorEvidence = (
+    factorCode: (typeof performanceFactorCodes)[number],
+    fileId: string | null,
+    evidenceNote: string | null,
+  ) =>
+    addFactorEv
+      .mutateAsync({
+        assignment_id: a.id,
+        factor_code: factorCode,
+        file_id: fileId,
+        note: evidenceNote,
+      })
+      .then(() =>
+        setFactorEvidenceNotes((notes) => ({
+          ...notes,
+          [factorCode]: "",
+        })),
+      );
   const payload = () => ({
     assignment_id: a.id,
     respondent: respondent!,
@@ -300,21 +378,36 @@ function EvaluationView({
       kpi_actual: r.kpi_actual ?? null,
       comment: r.comment ?? null,
     })),
+    factor_responses: (snap.performance_factors ?? []).map((factor) => ({
+      factor_code: factor.factor_code,
+      rating: factorVals[factor.factor_code]?.rating ?? null,
+      comment: factorVals[factor.factor_code]?.comment ?? null,
+    })),
     overall_comment: respondent === "evaluator" ? overall : null,
     version: a.version,
   });
-  const preview =
-    respondent === "evaluator"
-      ? computeScore(
-          allItems,
-          Object.entries(vals).map(([item_id, r]) => ({
-            item_id,
-            rating: r.rating,
-            kpi_actual: r.kpi_actual,
-          })),
-          snap.rating_scale_max,
-        )
-      : null;
+  const preview = respondent
+    ? computePerformanceScore(
+        (snap.performance_factors ?? []).map((factor) => ({
+          factor_code: factor.factor_code,
+          weight: factor.weight,
+          rating: factorVals[factor.factor_code]?.rating ?? null,
+        })),
+        snap.scoring_method ?? "equal",
+      )
+    : null;
+  const supervisorScorePreview = computePerformanceScore(
+    (snap.performance_factors ?? []).map((factor) => ({
+      factor_code: factor.factor_code,
+      weight: factor.weight,
+      rating:
+        data.factorResponses.find(
+          (response) =>
+            response.factor_code === factor.factor_code && response.respondent === "evaluator",
+        )?.rating ?? null,
+    })),
+    snap.scoring_method ?? "equal",
+  );
   const other = (itemId: string, who: "self" | "evaluator") =>
     data.responses.find((r) => r.item_id === itemId && r.respondent === who);
 
@@ -331,7 +424,8 @@ function EvaluationView({
         actions={
           <>
             <StatusBadge status={a.status} />
-            {a.overall_score != null && <Tag tone="primary">Score {a.overall_score}</Tag>}
+            {a.final_score != null && <Tag tone="primary">Final score {a.final_score} / 5</Tag>}
+            {a.classification && <Tag tone="success">{a.classification}</Tag>}
             {a.acknowledged_at && <Tag tone="success">Acknowledged</Tag>}
           </>
         }
@@ -353,6 +447,231 @@ function EvaluationView({
           {snap.rating_scale_max}.
         </p>
       )}
+
+      <Panel
+        title="Evaluation Summary"
+        description="Performance factor scores are calculated separately for each respondent."
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <ScoreSummary label="Employee self-evaluation" score={a.self_score} />
+          <ScoreSummary
+            label="Supervisor evaluation"
+            score={
+              a.supervisor_score ?? (canViewDraftSupervisorScore ? supervisorScorePreview : null)
+            }
+          />
+          <ScoreSummary
+            label="Final approved score"
+            score={a.final_score}
+            classification={a.classification}
+          />
+          <div className="rounded-md border p-3">
+            <p className="text-sm text-muted-foreground">Final score rule</p>
+            <p className="mt-1 font-semibold">
+              {snap.final_score_rule === "average"
+                ? "Configured average"
+                : snap.final_score_rule === "self"
+                  ? "Employee self-evaluation"
+                  : "Supervisor evaluation"}
+            </p>
+          </div>
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">
+          The final score is set only when an authorized reviewer approves this evaluation. No
+          official classification is applied unless HR configures score ranges in the profile.
+        </p>
+      </Panel>
+
+      <Panel
+        title="Performance Evaluation"
+        description="Rate each position-specific indicator from 1 (Poor) to 5 (Excellent). Employee and supervisor responses are stored independently."
+      >
+        {(snap.performance_factors ?? []).map((factor) => {
+          const value = factorVals[factor.factor_code] ?? {};
+          const employeeResponse = data.factorResponses.find(
+            (response) =>
+              response.factor_code === factor.factor_code && response.respondent === "self",
+          );
+          const supervisorResponse = data.factorResponses.find(
+            (response) =>
+              response.factor_code === factor.factor_code && response.respondent === "evaluator",
+          );
+          const safetyAlert =
+            factor.factor_code === "safety_consciousness_equipment" &&
+            [employeeResponse?.rating, supervisorResponse?.rating].some(
+              (rating) => rating !== null && rating !== undefined && rating <= 2,
+            );
+          return (
+            <div key={factor.factor_code} className="border-b py-4 last:border-0">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <h3 className="font-bold">{factor.title}</h3>
+                {snap.scoring_method === "weighted" && <Tag>{factor.weight}%</Tag>}
+                {factor.evidence_required && <Tag tone="info">Evidence required</Tag>}
+                {safetyAlert && <Tag tone="warning">Safety concern: review independently</Tag>}
+              </div>
+              <p className="text-sm">{factor.description}</p>
+              {factor.indicators.length > 0 && (
+                <ul className="my-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                  {factor.indicators.map((indicator) => (
+                    <li key={indicator}>{indicator}</li>
+                  ))}
+                </ul>
+              )}
+              {respondent && (
+                <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_minmax(16rem,1fr)]">
+                  <div>
+                    <p className="mb-1 text-sm font-semibold">Your rating</p>
+                    <div
+                      className="flex flex-wrap gap-1"
+                      role="radiogroup"
+                      aria-label={`${factor.title} rating`}
+                    >
+                      {Array.from({ length: 5 }, (_, index) => index + 1).map((rating) => (
+                        <button
+                          key={rating}
+                          type="button"
+                          role="radio"
+                          aria-checked={value.rating === rating}
+                          onClick={() => setFactor(factor.factor_code, { rating })}
+                          className={`size-10 rounded-md border font-data font-bold ${value.rating === rating ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-accent"}`}
+                          aria-label={`${rating} - ${["Poor", "Below Average", "Average", "Above Average", "Excellent"][rating - 1]}`}
+                        >
+                          {rating}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      1 Poor · 2 Below Average · 3 Average · 4 Above Average · 5 Excellent
+                    </p>
+                    <Textarea
+                      className="mt-2"
+                      aria-label={`Comment on ${factor.title}`}
+                      placeholder="Comments and examples"
+                      maxLength={4000}
+                      value={value.comment ?? ""}
+                      onChange={(event) =>
+                        setFactor(factor.factor_code, { comment: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {respondent !== "self" && (
+                      <ReadFactorResp label="Employee self-rating" response={employeeResponse} />
+                    )}
+                    {respondent !== "evaluator" && showEvaluatorToEmployee && (
+                      <ReadFactorResp label="Supervisor rating" response={supervisorResponse} />
+                    )}
+                    {respondent && (
+                      <div className="space-y-2 rounded-md border p-3">
+                        <Field
+                          label="Factor evidence note"
+                          htmlFor={`factor-note-${factor.factor_code}`}
+                        >
+                          <Input
+                            id={`factor-note-${factor.factor_code}`}
+                            value={factorEvidenceNotes[factor.factor_code] ?? ""}
+                            maxLength={2000}
+                            onChange={(event) =>
+                              setFactorEvidenceNotes((notes) => ({
+                                ...notes,
+                                [factor.factor_code]: event.target.value,
+                              }))
+                            }
+                          />
+                        </Field>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={
+                              !factorEvidenceNotes[factor.factor_code]?.trim() ||
+                              addFactorEv.isPending
+                            }
+                            onClick={() =>
+                              void saveFactorEvidence(
+                                factor.factor_code,
+                                null,
+                                factorEvidenceNotes[factor.factor_code] ?? "",
+                              )
+                            }
+                          >
+                            Add evidence note
+                          </Button>
+                          <EvidenceUpload
+                            employeeId={a.employee_id}
+                            onUploaded={(fileId) =>
+                              saveFactorEvidence(factor.factor_code, fileId, null)
+                            }
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {data.evidence
+                      .filter((evidence) => evidence.factor_code === factor.factor_code)
+                      .map((evidence) => (
+                        <div key={evidence.id} className="rounded-md bg-muted p-2">
+                          {evidence.file_id ? (
+                            <EvidenceFileLink
+                              fileId={evidence.file_id}
+                              name={evidence.file?.original_name ?? "Evidence file"}
+                            />
+                          ) : (
+                            evidence.note
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+              {!respondent && (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <ReadFactorResp label="Employee self-rating" response={employeeResponse} />
+                  {showEvaluatorToEmployee && (
+                    <ReadFactorResp label="Supervisor rating" response={supervisorResponse} />
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </Panel>
+
+      <Panel
+        title="Competency Assessment"
+        description="Validated competency assessments and gaps are separate from performance factor ratings."
+      >
+        {data.compGaps.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No position competency requirements or accessible assessment results are available.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {data.compGaps.map((gap) => (
+              <div
+                key={`${gap.competency_id}-${gap.employee_id}`}
+                className="grid gap-2 rounded-md border p-3 sm:grid-cols-[1fr_auto_auto_auto]"
+              >
+                <div>
+                  <p className="font-semibold">{gap.competency_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {gap.is_safety_critical ? "Safety-critical · " : ""}
+                    {gap.assessment_date
+                      ? `Validated ${fmtDate(gap.assessment_date)}`
+                      : "Not assessed"}
+                  </p>
+                  {gap.evidence_summary && (
+                    <p className="mt-1 text-sm text-muted-foreground">{gap.evidence_summary}</p>
+                  )}
+                </div>
+                <p className="text-sm">Required: {gap.required_level}</p>
+                <p className="text-sm">Current: {gap.current_level ?? "Not assessed"}</p>
+                <p className="text-sm">Gap: {gap.gap === null ? "Not assessed" : gap.gap}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
 
       <div className="space-y-4">
         {snap.sections.map((s) => (
@@ -636,7 +955,7 @@ function EvaluationView({
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 py-3 sm:px-6 lg:px-8">
             {preview !== null && (
               <span className="font-data text-sm">
-                Preview score: <strong>{preview}</strong> / 100
+                Your factor score preview: <strong>{preview}</strong> / 5
               </span>
             )}
             {dirty && <Tag tone="warning">Unsaved changes</Tag>}
@@ -753,6 +1072,36 @@ function ReadResp({ label, r }: { label: string; r: Resp }) {
       <p className="font-data text-xs font-semibold uppercase text-muted-foreground">{label}</p>
       <p className="whitespace-pre-wrap">{String(v)}</p>
       {r.comment && <p className="text-xs text-muted-foreground">{r.comment}</p>}
+    </div>
+  );
+}
+
+function ScoreSummary({
+  label,
+  score,
+  classification,
+}: {
+  label: string;
+  score: number | null;
+  classification?: string | null;
+}) {
+  return (
+    <div className="rounded-md border p-3">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="mt-1 font-data text-xl font-bold">
+        {score === null ? "Not submitted" : `${score} / 5`}
+      </p>
+      {classification && <Tag tone="success">{classification}</Tag>}
+    </div>
+  );
+}
+
+function ReadFactorResp({ label, response }: { label: string; response: FactorResp | undefined }) {
+  return (
+    <div className="rounded-md bg-muted p-2">
+      <p className="font-data text-xs font-semibold uppercase text-muted-foreground">{label}</p>
+      <p className="font-semibold">{response?.rating ?? "Not rated"}</p>
+      {response?.comment && <p className="whitespace-pre-wrap text-xs">{response.comment}</p>}
     </div>
   );
 }

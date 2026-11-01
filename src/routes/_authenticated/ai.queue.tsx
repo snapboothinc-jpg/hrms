@@ -67,6 +67,7 @@ function Page() {
   const [comments, setComments] = useState("");
   const [editPriority, setEditPriority] = useState("medium");
   const [editOutcome, setEditOutcome] = useState("");
+  const [editAssessmentMethod, setEditAssessmentMethod] = useState("");
   const [busy, setBusy] = useState(false);
   const [reviewsFor, setReviewsFor] = useState<AiRecRow | null>(null);
 
@@ -113,6 +114,7 @@ function Page() {
                 ? {
                     priority: editPriority as "high" | "medium" | "low",
                     expected_outcome: editOutcome || undefined,
+                    assessment_method: editAssessmentMethod || undefined,
                   }
                 : undefined,
             idempotencyKey: crypto.randomUUID(),
@@ -222,6 +224,7 @@ function Page() {
                   setDecision("accept");
                   setEditPriority(r.priority);
                   setEditOutcome(r.expected_outcome ?? "");
+                  setEditAssessmentMethod(r.assessment_method ?? "");
                 }}
               >
                 Review
@@ -298,6 +301,11 @@ function Page() {
                     Expected: {reviewing.expected_outcome}
                   </p>
                 )}
+                {reviewing.assessment_method && (
+                  <p className="mt-1 text-muted-foreground">
+                    Assessment method: {reviewing.assessment_method}
+                  </p>
+                )}
               </div>
               <Field label="Decision" htmlFor="rv-decision" required>
                 <NativeSelect
@@ -328,6 +336,15 @@ function Page() {
                       id="rv-outcome"
                       value={editOutcome}
                       onChange={(e) => setEditOutcome(e.target.value)}
+                      rows={2}
+                      maxLength={4000}
+                    />
+                  </Field>
+                  <Field label="Suggested assessment method" htmlFor="rv-assessment">
+                    <Textarea
+                      id="rv-assessment"
+                      value={editAssessmentMethod}
+                      onChange={(e) => setEditAssessmentMethod(e.target.value)}
                       rows={2}
                       maxLength={4000}
                     />
@@ -389,6 +406,11 @@ function ReviewHistory({ rec, onClose }: { rec: AiRecRow | null; onClose: () => 
             {rec.expected_outcome && (
               <p>
                 <span className="font-semibold">Expected outcome:</span> {rec.expected_outcome}
+              </p>
+            )}
+            {rec.assessment_method && (
+              <p>
+                <span className="font-semibold">Suggested assessment:</span> {rec.assessment_method}
               </p>
             )}
             <p className="text-muted-foreground">

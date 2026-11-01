@@ -82,29 +82,11 @@ export const generateAiRecommendations = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => aiGenerateSchema.parse(d))
   .handler(async ({ data, context }) =>
     runOp("ai_generate", context.userId, async () => {
-      const ctx = (await rpc<import("@/lib/ai/ai.server").AiContext>(
+      const ctx = await rpc<import("@/lib/ai/ai.server").AiContext>(
         context.supabase,
         "prepare_ai_context",
         { _employee: data.employee_id },
-      )) as never as {
-        employee: { id: string; name: string; position: string; department: string };
-        gaps: {
-          competency_id: string;
-          competency: string;
-          required_level: number;
-          current_level: number | null;
-          gap: number;
-          is_mandatory: boolean;
-          is_safety_critical: boolean;
-        }[];
-        resources: {
-          type: string;
-          id: string;
-          title: string;
-          summary: string;
-          competency_id: string;
-        }[];
-      };
+      );
       const { getAiConfig, runRecommendationCall } = await import("@/lib/ai/ai.server");
       const { data: settingsRow } = await context.supabase
         .from("ai_integration_settings")

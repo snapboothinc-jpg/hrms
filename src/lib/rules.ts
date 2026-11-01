@@ -36,6 +36,26 @@ export function canActivateProfile(items: WeightedItem[]): { ok: boolean; reason
   return { ok: true };
 }
 
+export function canActivateEvaluationProfile(
+  factors: { factor_code: string; weight: number }[],
+  scoringMethod: "weighted" | "equal",
+): { ok: boolean; reason?: string } {
+  const codes = new Set(factors.map((factor) => factor.factor_code));
+  if (factors.length !== 10 || codes.size !== 10)
+    return { ok: false, reason: "Configure all ten performance factors before activating" };
+  if (scoringMethod === "weighted") {
+    const total = weightTotal(
+      factors.map((factor) => ({ item_type: "rating", weight: factor.weight })),
+    );
+    if (total !== 100)
+      return {
+        ok: false,
+        reason: `Factor weights must total 100 percent (currently ${total})`,
+      };
+  }
+  return { ok: true };
+}
+
 export interface ScoreItem {
   id: string;
   item_type: string;
@@ -65,4 +85,36 @@ export function computeScore(
       total += w * Math.min(Math.max(r?.kpi_actual ?? 0, 0) / it.kpi_target, 1);
   }
   return Math.round(total * 100) / 100;
+}
+
+export interface PerformanceFactorScore {
+  factor_code: string;
+  weight: number;
+  rating: number | null;
+}
+
+/** Performance factor score uses the configured weights and remains on the 1–5 scale. */
+export function computePerformanceScore(
+  factors: PerformanceFactorScore[],
+  scoringMethod: "weighted" | "equal",
+): number | null {
+  const rated = factors.filter((factor) => factor.rating !== null);
+  if (!rated.length) return null;
+  const weightOf = (factor: PerformanceFactorScore) =>
+    scoringMethod === "equal" ? 1 : Number(factor.weight);
+  const denominator = rated.reduce((sum, factor) => sum + weightOf(factor), 0);
+  if (denominator <= 0) return null;
+  const score =
+    rated.reduce((sum, factor) => sum + Number(factor.rating) * weightOf(factor), 0) / denominator;
+  return Math.round(score * 100) / 100;
+}
+
+export function classifyPerformanceScore(
+  score: number | null,
+  thresholds: { label: string; min: number; max: number }[],
+): string | null {
+  if (score === null) return null;
+  return (
+    thresholds.find((threshold) => score >= threshold.min && score <= threshold.max)?.label ?? null
+  );
 }

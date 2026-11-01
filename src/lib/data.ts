@@ -231,6 +231,10 @@ export type AssignmentRow = {
   evaluator_id: string;
   status: string;
   overall_score: number | null;
+  self_score: number | null;
+  supervisor_score: number | null;
+  final_score: number | null;
+  classification: string | null;
   submitted_at: string | null;
   approved_at: string | null;
   acknowledged_at: string | null;
@@ -253,7 +257,7 @@ export type AssignmentRow = {
 };
 
 export const ASSIGNMENT_SELECT =
-  "id, cycle_id, employee_id, evaluator_id, status, overall_score, submitted_at, approved_at, acknowledged_at, acknowledged_by, acknowledgement_comment, self_submitted_at, self_evaluation, created_at, version, profile_version_id, employee:employees!evaluation_assignments_employee_id_fkey(first_name,last_name,employee_code,department_id), evaluator:employees!evaluation_assignments_evaluator_id_fkey(first_name,last_name), cycle:evaluation_cycles(name,status,due_date), profile_version:evaluation_profile_versions(version_number)";
+  "id, cycle_id, employee_id, evaluator_id, status, overall_score, self_score, supervisor_score, final_score, classification, submitted_at, approved_at, acknowledged_at, acknowledged_by, acknowledgement_comment, self_submitted_at, self_evaluation, created_at, version, profile_version_id, employee:employees!evaluation_assignments_employee_id_fkey(first_name,last_name,employee_code,department_id), evaluator:employees!evaluation_assignments_evaluator_id_fkey(first_name,last_name), cycle:evaluation_cycles(name,status,due_date), profile_version:evaluation_profile_versions(version_number)";
 
 export const fetchAssignments = async (
   f: { cycle?: string; employee?: string; evaluator?: string } & Page = {},
@@ -586,6 +590,7 @@ export type PlanItemRow = {
   item_type: string;
   title: string;
   description: string | null;
+  assessment_method: string | null;
   competency_id: string | null;
   course_id: string | null;
   learning_path_id: string | null;
@@ -815,6 +820,7 @@ export type AiRecRow = {
   resource_id: string;
   rationale: string;
   expected_outcome: string | null;
+  assessment_method: string | null;
   priority: string;
   status: string;
   model: string;

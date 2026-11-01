@@ -60,9 +60,19 @@ export function AssignmentsTable({
       cell: ({ getValue }) => fmtDate(getValue() as string),
     },
     {
-      header: "Score",
-      accessorKey: "overall_score",
-      cell: ({ getValue }) => (getValue() == null ? "—" : `${getValue()}`),
+      header: "Self score",
+      accessorFn: (r) => (r.self_score == null ? "—" : `${r.self_score} / 5`),
+    },
+    {
+      header: "Supervisor score",
+      accessorFn: (r) => (r.supervisor_score == null ? "—" : `${r.supervisor_score} / 5`),
+    },
+    {
+      header: "Final score",
+      accessorFn: (r) =>
+        r.final_score == null
+          ? "—"
+          : `${r.final_score} / 5${r.classification ? ` · ${r.classification}` : ""}`,
     },
     {
       header: "Acknowledgement",

@@ -38,6 +38,7 @@ const recommendation = (overrides: Partial<AiRecRow> = {}): AiRecRow => ({
   resource_id: "course-1",
   rationale: "Mapped course addresses the validated gap",
   expected_outcome: "Demonstrate route planning",
+  assessment_method: null,
   priority: "high",
   status: "pending_review",
   model: "gemini-2.5-flash",

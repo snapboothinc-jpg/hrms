@@ -103,6 +103,56 @@ export const itemTypes = [
   "yes_no",
   "kpi",
 ] as const;
+export const performanceFactorCodes = [
+  "quality_of_work",
+  "quantity_of_work",
+  "job_knowledge",
+  "ability_to_learn",
+  "dependability",
+  "initiative",
+  "human_relations_teamwork",
+  "cost_consciousness",
+  "discipline",
+  "safety_consciousness_equipment",
+] as const;
+
+export const performanceFactorTitles: Record<(typeof performanceFactorCodes)[number], string> = {
+  quality_of_work: "Quality of Work",
+  quantity_of_work: "Quantity of Work",
+  job_knowledge: "Job Knowledge",
+  ability_to_learn: "Ability to Learn",
+  dependability: "Dependability",
+  initiative: "Initiative",
+  human_relations_teamwork: "Human Relations / Teamwork",
+  cost_consciousness: "Cost Consciousness",
+  discipline: "Discipline",
+  safety_consciousness_equipment: "Safety Consciousness / Care of Equipment",
+};
+
+export const performanceFactorSchema = z
+  .object({
+    factor_code: z.enum(performanceFactorCodes),
+    title: z.string().trim().min(2).max(120),
+    description: z.string().trim().min(2).max(2000),
+    indicators: z.array(z.string().trim().min(2).max(1000)).min(1).max(30),
+    weight: z.coerce.number().min(0).max(100),
+    evidence_required: z.boolean(),
+    sort_order: z.number().int().min(0).max(9),
+  })
+  .strict();
+
+export const classificationThresholdSchema = z
+  .object({
+    label: z.string().trim().min(1).max(120),
+    min: z.coerce.number().min(1).max(5),
+    max: z.coerce.number().min(1).max(5),
+  })
+  .strict()
+  .refine((threshold) => threshold.min <= threshold.max, {
+    message: "The minimum score must not exceed the maximum.",
+    path: ["min"],
+  });
+
 export const ITEM_TYPE_LABELS: Record<(typeof itemTypes)[number], string> = {
   rating: "Numeric rating",
   short_text: "Short text",
@@ -147,6 +197,10 @@ export const profileContentSchema = z
     rating_scale_max: z.coerce.number().int().min(5).max(5),
     instructions: z.string().max(4000).optional(),
     effective_date: z.string().max(10).optional(),
+    scoring_method: z.enum(["weighted", "equal"]),
+    final_score_rule: z.enum(["supervisor", "self", "average"]),
+    classification_thresholds: z.array(classificationThresholdSchema).max(5),
+    performance_factors: z.array(performanceFactorSchema).length(10),
     sections: z
       .array(
         z
@@ -159,7 +213,77 @@ export const profileContentSchema = z
       )
       .max(20),
   })
+  .strict()
+  .superRefine((profile, ctx) => {
+    const codes = profile.performance_factors.map((factor) => factor.factor_code);
+    if (
+      new Set(codes).size !== performanceFactorCodes.length ||
+      performanceFactorCodes.some((code) => !codes.includes(code))
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["performance_factors"],
+        message: "Configure each of the ten performance factors exactly once.",
+      });
+    }
+    if (
+      profile.performance_factors.some(
+        (factor) => factor.title !== performanceFactorTitles[factor.factor_code],
+      )
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["performance_factors"],
+        message: "The original ten factor names must be preserved.",
+      });
+    }
+    if (profile.scoring_method === "weighted") {
+      const total = profile.performance_factors.reduce((sum, factor) => sum + factor.weight, 0);
+      if (Math.round(total * 100) / 100 !== 100) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["performance_factors"],
+          message: "Factor weights must total 100% when weighted scoring is selected.",
+        });
+      }
+    }
+    const thresholds = profile.classification_thresholds;
+    for (let index = 0; index < thresholds.length; index += 1) {
+      for (let other = index + 1; other < thresholds.length; other += 1) {
+        const left = thresholds[index]!;
+        const right = thresholds[other]!;
+        if (left.min <= right.max && right.min <= left.max) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["classification_thresholds", other],
+            message: "Classification score ranges cannot overlap.",
+          });
+        }
+      }
+    }
+  });
+
+export const performanceFactorResponseSchema = z
+  .object({
+    factor_code: z.enum(performanceFactorCodes),
+    rating: z.number().int().min(1).max(5).nullable(),
+    comment: z.string().max(4000).nullable(),
+  })
   .strict();
+
+export const addPerformanceFactorEvidenceSchema = z
+  .object({
+    assignment_id: uuid,
+    factor_code: z.enum(performanceFactorCodes),
+    file_id: uuid.nullable(),
+    note: z.string().max(2000).nullable(),
+    ...idem,
+  })
+  .strict()
+  .refine((data) => data.file_id !== null || Boolean(data.note?.trim()), {
+    message: "Provide a file or evidence note.",
+    path: ["note"],
+  });
 
 export const responseSchema = z
   .object({
@@ -177,6 +301,7 @@ export const saveEvaluationSchema = z
     assignment_id: uuid,
     respondent: z.enum(["self", "evaluator"]),
     responses: z.array(responseSchema).max(200),
+    factor_responses: z.array(performanceFactorResponseSchema).length(10),
     overall_comment: z.string().max(8000).nullable(),
     version: z.number().int(),
   })
@@ -552,6 +677,7 @@ export const aiReviewSchema = z
       .object({
         priority: z.enum(["high", "medium", "low"]).optional(),
         expected_outcome: z.string().max(4000).optional(),
+        assessment_method: z.string().max(4000).optional(),
         title: z.string().max(200).optional(),
       })
       .strict()

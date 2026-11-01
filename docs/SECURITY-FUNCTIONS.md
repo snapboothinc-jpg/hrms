@@ -9,7 +9,7 @@ function that cannot safely self-authorize is revoked to `service_role` only.
 ## How to re-derive the list
 
 ```bash
-rg -o "create or replace function public\.[a-z_0-9]+" drizzle/migrations/*.sql | sort -u
+rg -o "create or replace function public\.[a-z_0-9]+" supabase/migrations/*.sql | sort -u
 ```
 
 The scan's count of 53 referred to the set at that time; the schema has since grown

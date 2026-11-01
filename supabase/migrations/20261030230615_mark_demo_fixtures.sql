@@ -29,7 +29,7 @@ BEGIN
   UPDATE public.profiles
      SET is_demo = true
    WHERE id = ANY(_users)
-     AND email LIKE '%@priorityhandling.demo'
+     AND email ~ '^[a-z]+\.[a-z]+\+priority@gmail\.com$'
      AND NOT EXISTS (
        SELECT 1 FROM public.user_roles
         WHERE user_id = profiles.id AND role = 'super_admin'
@@ -51,7 +51,7 @@ BEGIN
   UPDATE public.departments
      SET is_demo = true
    WHERE id = ANY(_departments)
-     AND code LIKE 'DEMO-%';
+     AND name = 'Logistics Department';
   GET DIAGNOSTICS department_count = ROW_COUNT;
   IF department_count <> cardinality(_departments) THEN
     RAISE EXCEPTION 'CONFLICT: department fixture is missing or not marked as demo';
@@ -60,7 +60,6 @@ BEGIN
   UPDATE public.positions
      SET is_demo = true
    WHERE id = ANY(_positions)
-     AND code LIKE 'DEMO-%'
      AND department_id = ANY(_departments);
   GET DIAGNOSTICS position_count = ROW_COUNT;
   IF position_count <> cardinality(_positions) THEN

@@ -245,6 +245,11 @@ function Page() {
                   {i.evidence && (
                     <p className="mt-1 text-xs text-muted-foreground">Evidence: {i.evidence}</p>
                   )}
+                  {i.assessment_method && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Suggested assessment: {i.assessment_method}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Tag
