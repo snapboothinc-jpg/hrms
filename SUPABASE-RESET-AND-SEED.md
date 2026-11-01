@@ -1,12 +1,13 @@
 # Supabase Database and Seed Runbook
 
-## Current project and credentials
+## Linked project and credentials
 
 The Supabase CLI currently links this checkout to project
 `cmkmipoygxoktknpfgnq`, named **performance and development** in organization
 `bubpepsbzounegickanv`. The CLI reports it as active and in `eu-west-1`.
-This is the project currently configured for this repository; its name does not
-establish that it is the production project.
+The owner identifies this linked project as production. Confirm the project ref
+and environment with the owner before any hosted operation; a project name alone
+does not identify its environment.
 
 Authentication is provided by the existing Supabase CLI login. Do not copy
 access tokens, database passwords, service keys, or connection strings into
@@ -34,10 +35,10 @@ npx.cmd supabase migration list --linked
 npx.cmd supabase db push --linked --dry-run
 ```
 
-This checkout's linked project currently reports all 20 repository migrations
-as pending. That output does not prove which project is production, and no
-migrations have been applied by this runbook. Do not push until the target
-project and its existing schema/data have been independently verified.
+As of 2026-11-01, the linked database reports the first 20 repository
+migrations applied; `20261101010000` and `20261101020000` are pending. A
+dry-run listed only those two migrations. This status is specific to the
+currently linked project and must be checked again before an operation.
 
 For a normal forward-only deployment, use:
 
@@ -65,56 +66,36 @@ npx.cmd supabase db reset --local --no-seed
 `npm run db:reset:local` is a local-only command and always passes `--no-seed`.
 Never substitute `--linked` for `--local`.
 
-### Explicitly authorized full reset and demo reseed
+### Current reset and seed status
 
-The project owner explicitly authorized a full wipe of the currently linked
-project (`cmkmipoygxoktknpfgnq`) on 2026-11-01. The following command completed
-successfully: all 20 migrations were applied and the development demo seed was
-loaded using Supabase CLI authentication; no credentials were written to this
-file.
+A hosted reset was completed on 2026-11-01 at the owner's request, before the
+current repository revision. The linked database was subsequently observed to
+have 20 migrations applied and seven legacy demo accounts. The current
+repository no longer contains the legacy `supabase/seeds/development/demo.sql`
+fixture: it was deliberately removed in favor of a local-only, environment-
+configured seed. Therefore, do not repeat the hosted reset command: the current
+checkout cannot recreate those accounts after a wipe.
 
-```powershell
-npx.cmd supabase db reset --linked --yes --sql-paths ./seeds/development/demo.sql
-```
+The replacement `scripts/database/seed-initial.mjs` rejects non-loopback
+database and Auth hosts, requires seven distinct development passwords from
+environment variables, and is only suitable for a local development instance.
+`supabase/config.toml` also disables automatic seed execution. There is no
+current production seed or production account-provisioning workflow. The
+passwords of existing Auth accounts cannot be read from Postgres; rotate or
+reset them through the supported Auth administration process if needed.
 
-This reset initially exposed an unapplied migration policy-drop error and
-fixture seed omissions. Those were corrected before completion. Do not copy
-this command into routine deployment automation.
-
-## Development demo seed
-
-Supabase CLI seeding is explicitly disabled in `supabase/config.toml` and no
-SQL seed path is configured. Migrations, local startup, and database resets
-therefore do not load demo data. The demo seed contains shared test credentials
-and is only for an isolated development database; it must never be run against
-production.
-
-For a local development database, point `DATABASE_URL` at that local database
-and invoke the explicit seed command:
+For local development only, follow
+[`supabase/seeds/development/README.md`](./supabase/seeds/development/README.md)
+and use:
 
 ```powershell
-$env:HRMS_SEED_ENV = 'development'
-$env:DATABASE_URL = 'postgresql://postgres:your-local-password@127.0.0.1:54322/postgres'
-npm.cmd run db:seed:demo
+npm.cmd run db:setup:local
 ```
 
-Use the local database password printed by `npx.cmd supabase status` rather
-than committing it here. The seed command accepts loopback database hosts
-without an extra override. It rejects non-loopback hosts unless
-`HRMS_SEED_REMOTE_CONFIRM` exactly matches the database hostname; this guard
-does not make a production database safe to seed.
-
-A complete existing fixture is left unchanged on rerun; a partial or
-conflicting fixture causes the seed transaction to fail rather than overwrite
-or duplicate existing records. `psql` must be installed and available on
-`PATH`.
-
-The demo accounts use a shared development password defined in the seed SQL.
-Because these fixtures were explicitly requested on the production project,
-the owner should immediately rotate or disable these accounts and replace the
-shared password before any real users access the system. Testing SQL fixtures
-and reference datasets have separate directories but no SQL datasets are
-currently defined.
+This resets only the local database, applies migrations without automatic
+seeding, and runs the guarded local seed. Do not substitute `--linked` for
+`--local`. Hosted account seeding requires a separate, reviewed, production-
+safe provisioning workflow; it must not reuse development passwords.
 
 See [the runbook](./docs/RUNBOOK.md#setup) for schema responsibilities and
-seed account details.
+the current account-seeding model.
