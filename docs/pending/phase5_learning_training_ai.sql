@@ -4,34 +4,10 @@
 -- Conventions: writes via SECURITY DEFINER RPCs (self-authorizing), tables grant SELECT only,
 -- RLS on every table, audit via tg_audit trigger, demo rows flagged is_demo.
 
--- ===== permissions =====
-insert into public.role_permissions(role, permission) values
- ('ops_manager','learn.manage'),('ops_manager','train.manage'),('ops_manager','ai.generate'),('ops_manager','ai.review'),
- ('hr_admin','learn.manage'),('hr_admin','learn.approve'),('hr_admin','train.manage'),('hr_admin','ai.generate'),('hr_admin','ai.review'),
- ('supervisor','ai.generate'),('dept_head','ai.generate');
-
--- ===== status machines =====
-insert into public.status_transitions(entity, from_status, to_status) values
- ('course','draft','pending_review'),('course','pending_review','approved'),('course','pending_review','draft'),
- ('course','approved','archived'),('course','draft','archived'),
- ('ai_recommendation','pending_review','accepted'),('ai_recommendation','pending_review','edited'),('ai_recommendation','pending_review','rejected'),
- ('development_plan','draft','active'),('development_plan','active','completed'),('development_plan','active','cancelled'),('development_plan','draft','cancelled'),
- ('plan_item','pending','in_progress'),('plan_item','in_progress','completed'),('plan_item','pending','cancelled'),('plan_item','in_progress','cancelled'),
- ('training_session','planned','in_progress'),('training_session','planned','cancelled'),('training_session','in_progress','completed'),('training_session','in_progress','cancelled');
-
--- ===== approval workflow types =====
+-- Initial permissions, transitions and settings live in scripts/seed/seed.mjs.
 alter table public.approval_tasks drop constraint approval_tasks_workflow_type_check;
 alter table public.approval_tasks add constraint approval_tasks_workflow_type_check
   check (workflow_type in ('evaluation','competency_assessment','course_publication','ai_recommendation','recognition_nomination'));
-
--- ===== configuration (defaults require organizational validation) =====
-insert into public.system_settings(key, value, description) values
- ('learning.publication_route', '"ops_submits_hr_approves"', 'Default - requires organizational validation. Operations Manager submits courses; HR Administrator approves publication.'),
- ('learning.quiz_max_attempts_default', '3', 'Default - requires organizational validation. Default maximum quiz attempts.'),
- ('ai.provider', '"gemini"', 'Default - requires organizational validation. AI provider for development recommendations.'),
- ('ai.model', '"gemini-2.5-flash"', 'Default - requires organizational validation. Model used for development recommendations.'),
- ('ai.max_items_per_run', '10', 'Default - requires organizational validation. Maximum recommendations per generation run.'),
- ('training.attendance_recorders', '"ops_manager_or_hr"', 'Default - requires organizational validation. Who may record attendance.');
 
 -- ===== learning tables =====
 create table public.courses (
@@ -408,7 +384,6 @@ create table public.ai_integration_settings (
   created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
   created_by uuid default auth.uid(), updated_by uuid
 );
-insert into public.ai_integration_settings(provider, model) values ('gemini','gemini-2.5-flash');
 
 -- ===== outbox (notifications, emails, AI side effects; processed asynchronously) =====
 create table public.outbox_events (
@@ -1253,8 +1228,7 @@ end $$;
 revoke execute on function public.process_outbox(int) from public, anon, authenticated;
 grant execute on function public.process_outbox(int) to service_role;
 
--- Development demo fixtures are maintained separately in
--- supabase/seeds/development/demo.sql.
+-- Development master data is maintained separately in scripts/seed/seed.mjs.
 
 -- lock down new function execution like previous migrations
 do $$ declare f record; begin

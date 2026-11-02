@@ -57,7 +57,7 @@ the permission check is inside the function, so direct calls cannot bypass it.
 | Function                                  | Why restricted                                                                                                                                                     |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `process_outbox(int)`                     | Runs the outbox worker; revoked from `public`/`anon`/`authenticated`, granted to `service_role`. Called only by the secured `/api/public/outbox/process` endpoint. |
-| `remove_demo_data()`, `reset_demo_data()` | Destructive demo lifecycle; service-role / non-demo Super Admin only.                                                                                              |
+| `remove_demo_data()`                        | Removes explicitly flagged demo rows; non-demo Super Admin only. The obsolete reseed routine has been removed.                                                       |
 
 ### 3. Trigger and helper functions (not meant to be called directly)
 

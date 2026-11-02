@@ -8,6 +8,6 @@
 - Evaluation assignments store an immutable `snapshot` of the profile version; only draft profile versions are editable (triggers enforce). Why: history never changes when profiles change.
 - Editable records carry `version`; updates require the expected version (409 on mismatch). Side-effecting actions take an Idempotency-Key stored in `idempotency_keys` (24h, per user).
 - Audit is written by the `tg_audit` trigger on business tables; `audit_logs` rejects update/delete. Why: same-transaction, append-only audit.
-- Demo data is flagged `is_demo` and removed with `public.remove_demo_data()`. Live access tests (`RUN_ACCESS_TESTS=1`) run against demo accounts and mutate demo data.
+- Development accounts and organization fixtures are created only by `npm run db:seed` from `scripts/seed/seed.mjs`. The seed creates master data and accounts only, not business transactions. Explicitly flagged demo rows can still be removed with `public.remove_demo_data()`.
 - `skills/` holds third-party Claude Code skills converted for reference; they are not runtime code.
 - tsconfig relaxes exactOptionalPropertyTypes / noUncheckedIndexedAccess / noPropertyAccessFromIndexSignature. Why: compatibility with generated shadcn/TanStack typings.

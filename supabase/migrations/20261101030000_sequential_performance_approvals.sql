@@ -164,33 +164,6 @@ create trigger evaluation_reviews_immutable
   before update or delete on public.evaluation_reviews
   for each row execute function public.reject_evaluation_history_mutation();
 
-insert into public.role_permissions(role, permission)
-values ('dept_head', 'perf.approve')
-on conflict (role, permission) do nothing;
-
-delete from public.status_transitions where entity = 'evaluation';
-
-insert into public.status_transitions(entity, from_status, to_status) values
-  ('evaluation', 'not_started', 'in_progress'),
-  ('evaluation', 'in_progress', 'in_progress'),
-  ('evaluation', 'in_progress', 'supervisor_pending'),
-  ('evaluation', 'not_started', 'supervisor_pending'),
-  ('evaluation', 'returned_for_revision', 'supervisor_pending'),
-  ('evaluation', 'not_started', 'supervisor_in_progress'),
-  ('evaluation', 'not_started', 'department_head_pending'),
-  ('evaluation', 'returned_for_revision', 'in_progress'),
-  ('evaluation', 'returned_for_revision', 'supervisor_in_progress'),
-  ('evaluation', 'supervisor_pending', 'supervisor_in_progress'),
-  ('evaluation', 'supervisor_in_progress', 'supervisor_in_progress'),
-  ('evaluation', 'supervisor_pending', 'department_head_pending'),
-  ('evaluation', 'supervisor_in_progress', 'department_head_pending'),
-  ('evaluation', 'returned_for_revision', 'department_head_pending'),
-  ('evaluation', 'department_head_pending', 'returned_for_revision'),
-  ('evaluation', 'hr_admin_pending', 'returned_for_revision'),
-  ('evaluation', 'department_head_pending', 'hr_admin_pending'),
-  ('evaluation', 'hr_admin_pending', 'department_head_pending'),
-  ('evaluation', 'hr_admin_pending', 'approved');
-
 -- New profile versions no longer inject the conceptual ten factors. Criteria
 -- are the versioned profile rating items and are specific to the position.
 create or replace function public.create_profile(_position uuid, _name text, _desc text)

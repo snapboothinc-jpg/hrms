@@ -305,7 +305,9 @@ Shared: notifications, approval_tasks, audit_logs, file_metadata, system_setting
 
 Add tables where a sound design needs them. Avoid duplicating business data across unrelated tables.
 
-Use version-controlled migrations. Seed a clearly labeled demo dataset that can be removed, so both populated and empty states can be tested.
+Use version-controlled migrations. Keep development setup data in the explicit seed
+script; seed only approved configuration and master data, never fake business
+transactions.
 Server operations
 Create server functions with Zod input validation and consistent error responses for:
 
@@ -566,8 +568,8 @@ variables, deployment operations, and safety requirements.
 
    For a linked database, review `npm run db:migrations:list` and
    `npm run db:push:dry-run` before a deliberate `npm run db:push`. Supabase CLI
-   automatic seed execution is disabled. Development demo fixtures are separate
-   and require the guarded command in [the runbook](./docs/RUNBOOK.md#setup).
+   automatic seed execution is disabled. Development configuration is separate
+   and requires the guarded command in [the runbook](./docs/RUNBOOK.md#setup).
 
 4. Start the app:
 

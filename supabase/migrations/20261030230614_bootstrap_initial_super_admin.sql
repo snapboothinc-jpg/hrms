@@ -22,8 +22,8 @@ BEGIN
      AND p.is_active
      AND NOT p.is_demo;
 
-  IF account_email IS DISTINCT FROM 'victor.superadmin+priority@gmail.com' THEN
-    RAISE EXCEPTION 'INVALID: bootstrap account must use the designated initial super admin address';
+  IF account_email IS NULL THEN
+    RAISE EXCEPTION 'INVALID: bootstrap account must be active and email-confirmed';
   END IF;
 
   IF (SELECT count(*) FROM auth.users) <> 1

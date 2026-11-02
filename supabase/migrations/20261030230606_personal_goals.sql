@@ -196,27 +196,12 @@ revoke execute on function public._remove_demo_data_before_personal_goals() from
 revoke execute on function public.remove_demo_data() from public, anon;
 grant execute on function public.remove_demo_data() to authenticated;
 
-alter function public.reset_demo_data() rename to _reset_demo_data_before_personal_goals;
-create function public.reset_demo_data() returns jsonb
-language plpgsql security definer set search_path=public as $$
-declare result jsonb;
-begin
-  if not public.has_role(auth.uid(),'super_admin') then raise exception 'FORBIDDEN'; end if;
-  delete from public.personal_goals
-  where is_demo or employee_id in (select id from public.employees where is_demo);
-  result := public._reset_demo_data_before_personal_goals();
-  return result;
-end $$;
-revoke execute on function public._reset_demo_data_before_personal_goals() from public, anon, authenticated;
-revoke execute on function public.reset_demo_data() from public, anon;
-grant execute on function public.reset_demo_data() to authenticated;
-
 do $$ declare f record; begin
   for f in select p.oid::regprocedure sig from pg_proc p
     join pg_namespace n on n.oid=p.pronamespace
     where n.nspname='public' and p.proname in
       ('upsert_personal_goal','submit_personal_goal','update_personal_goal_progress','review_personal_goal',
-       'remove_demo_data','reset_demo_data')
+       'remove_demo_data')
   loop
     execute format('revoke execute on function %s from public, anon',f.sig);
     execute format('grant execute on function %s to authenticated, service_role',f.sig);

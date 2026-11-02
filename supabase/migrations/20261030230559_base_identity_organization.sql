@@ -432,29 +432,3 @@ create policy "files scoped" on public.file_metadata for select to authenticated
 create policy "settings readable" on public.system_settings for select to authenticated using (auth.uid() is not null);
 create policy "transitions readable" on public.status_transitions for select to authenticated using (auth.uid() is not null);
 -- idempotency_keys: no policies (deny all to clients)
-
--- ============ CONFIG SEEDS (configuration, not demo data) ============
-insert into public.role_permissions(role, permission) values
- ('super_admin','admin.users'),('super_admin','admin.audit'),('super_admin','admin.settings'),('super_admin','admin.org'),('super_admin','admin.roles'),
- ('admin','admin.users'),('admin','admin.audit'),('admin','admin.settings'),('admin','admin.org'),
- ('hr_admin','employees.view_all'),('hr_admin','hr.employees'),('hr_admin','perf.manage'),('hr_admin','perf.approve'),('hr_admin','comp.manage'),('hr_admin','comp.approve'),('hr_admin','comp.assess'),('hr_admin','reports.hr'),
- ('dept_head','perf.evaluate'),('dept_head','comp.assess'),('dept_head','comp.approve'),('dept_head','team.view'),
- ('supervisor','perf.evaluate'),('supervisor','comp.assess'),('supervisor','team.view'),
- ('ops_manager','comp.view_all'),
- ('employee','self.service');
-
-insert into public.status_transitions(entity, from_status, to_status) values
- ('evaluation','not_started','in_progress'),('evaluation','in_progress','in_progress'),('evaluation','reopened','in_progress'),
- ('evaluation','in_progress','submitted'),('evaluation','not_started','submitted'),('evaluation','reopened','submitted'),
- ('evaluation','submitted','under_review'),('evaluation','submitted','approved'),('evaluation','under_review','approved'),
- ('evaluation','submitted','reopened'),('evaluation','under_review','reopened'),('evaluation','approved','reopened'),
- ('profile_version','draft','active'),('profile_version','active','archived'),('profile_version','draft','archived'),
- ('assessment','draft','submitted'),('assessment','submitted','approved'),('assessment','submitted','rejected'),('assessment','draft','draft'),
- ('cycle','draft','open'),('cycle','open','closed'),('cycle','closed','open');
-
-insert into public.system_settings(key, value, description) values
- ('evaluation.self_evaluation_default', 'true', 'Default - requires organizational validation. Whether new cycles include a self-evaluation.'),
- ('evaluation.approval_route', '"hr_admin"', 'Default - requires organizational validation. Role that approves submitted evaluations.'),
- ('assessment.approval_route', '"supervisor_chain_or_hr"', 'Default - requires organizational validation. Department head or HR approves assessments; assessor may not approve own.'),
- ('assessment.evidence_required', 'true', 'Default - requires organizational validation. Assessments require evidence before submission.'),
- ('evaluation.rating_scale_max', '5', 'Default - requires organizational validation. Rating scale maximum for numeric items.');

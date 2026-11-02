@@ -1137,6 +1137,36 @@ export type Database = {
           },
         ];
       };
+      department_job_categories: {
+        Row: {
+          category_id: string;
+          department_id: string;
+        };
+        Insert: {
+          category_id: string;
+          department_id: string;
+        };
+        Update: {
+          category_id?: string;
+          department_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "department_job_categories_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "job_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "department_job_categories_department_id_fkey";
+            columns: ["department_id"];
+            isOneToOne: false;
+            referencedRelation: "departments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       departments: {
         Row: {
           code: string;
@@ -2817,6 +2847,69 @@ export type Database = {
             foreignKeyName: "position_competency_requirements_position_id_fkey";
             columns: ["position_id"];
             isOneToOne: false;
+            referencedRelation: "positions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      job_categories: {
+        Row: {
+          code: string;
+          created_at: string;
+          created_by: string | null;
+          description: string | null;
+          id: string;
+          name: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          code: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          id?: string;
+          name: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          code?: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string | null;
+          id?: string;
+          name?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      job_category_positions: {
+        Row: {
+          category_id: string;
+          position_id: string;
+        };
+        Insert: {
+          category_id: string;
+          position_id: string;
+        };
+        Update: {
+          category_id?: string;
+          position_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "job_category_positions_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "job_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "job_category_positions_position_id_fkey";
+            columns: ["position_id"];
+            isOneToOne: true;
             referencedRelation: "positions";
             referencedColumns: ["id"];
           },
@@ -4761,7 +4854,6 @@ export type Database = {
         _assert_report_access: { Args: { _kind: string }; Returns: undefined };
         Returns: Json;
       };
-      reset_demo_data: { Args: never; Returns: Json };
       review_ai_recommendation: {
         Args: {
           _comments: string;

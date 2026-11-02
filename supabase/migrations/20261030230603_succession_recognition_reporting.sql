@@ -1,21 +1,6 @@
 -- Succession, recognition and scoped reporting domain schema and operations.
 
--- Phase 6, stage 1: succession planning, recognition, readiness config, scoped report reader.
-insert into public.role_permissions(role, permission) values
- ('hr_admin','succession.manage'),('hr_admin','recognition.review');
-
-insert into public.status_transitions(entity, from_status, to_status) values
- ('nomination','submitted','approved'),('nomination','submitted','rejected'),
- ('succession_candidate','active','withdrawn'),('succession_candidate','active','appointed'),
- ('critical_position','active','monitoring'),('critical_position','monitoring','active'),
- ('critical_position','active','closed'),('critical_position','monitoring','closed');
-
-insert into public.system_settings(key, value, description) values
- ('recognition.min_message_length', '20', 'Default - requires organizational validation. Minimum nomination message length.'),
- ('recognition.max_nominations_per_month', '5', 'Default - requires organizational validation. Maximum nominations one employee may submit per calendar month.'),
- ('recognition.approval_route', '"hr_admin"', 'Default - requires organizational validation. HR Administrator reviews nominations before publishing.'),
- ('succession.readiness_note', '"configurable"', 'Default - requires organizational validation. Readiness classifications are configurable defaults.');
-
+-- Phase 6, stage 1: succession planning, recognition and scoped report reader.
 create table public.readiness_classes (
   id uuid primary key default gen_random_uuid(),
   code text not null unique check (length(code) between 1 and 30),
@@ -27,12 +12,6 @@ create table public.readiness_classes (
   created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
   created_by uuid default auth.uid(), updated_by uuid
 );
-insert into public.readiness_classes(code,label,description,sort_order) values
- ('ready_now','Ready now','Default - requires organizational validation. Candidate can step in immediately.',0),
- ('ready_1_2','Ready in 1-2 years','Default - requires organizational validation. Candidate needs limited further development.',1),
- ('ready_3_plus','Ready in 3+ years','Default - requires organizational validation. Candidate needs substantial development.',2),
- ('not_ready','Not ready','Default - requires organizational validation. Candidate is not currently on track.',3);
-
 create table public.succession_access_grants (
   id uuid primary key default gen_random_uuid(),
   department_id uuid not null references public.departments(id) on delete cascade,
@@ -110,11 +89,6 @@ create table public.recognition_categories (
   created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
   created_by uuid default auth.uid(), updated_by uuid
 );
-insert into public.recognition_categories(name,description) values
- ('Safety Champion','Default - requires organizational validation. For outstanding safety behaviour.'),
- ('Customer Hero','Default - requires organizational validation. For exceptional customer service.'),
- ('Team Player','Default - requires organizational validation. For helping the team succeed.');
-
 create table public.recognition_nominations (
   id uuid primary key default gen_random_uuid(),
   nominator_id uuid not null references public.employees(id) on delete restrict,

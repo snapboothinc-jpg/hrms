@@ -1,30 +1,9 @@
 -- Learning, training, AI/outbox schema and operations, with the Gemini-only provider configuration.
 
--- Phase 5, stage 1: learning management schema, permissions, settings, scope helpers, RLS.
-insert into public.role_permissions(role, permission) values
- ('ops_manager','learn.manage'),('ops_manager','train.manage'),('ops_manager','ai.generate'),('ops_manager','ai.review'),
- ('hr_admin','learn.manage'),('hr_admin','learn.approve'),('hr_admin','train.manage'),('hr_admin','ai.generate'),('hr_admin','ai.review'),
- ('supervisor','ai.generate'),('dept_head','ai.generate');
-
-insert into public.status_transitions(entity, from_status, to_status) values
- ('course','draft','pending_review'),('course','pending_review','approved'),('course','pending_review','draft'),
- ('course','approved','archived'),('course','draft','archived'),
- ('ai_recommendation','pending_review','accepted'),('ai_recommendation','pending_review','edited'),('ai_recommendation','pending_review','rejected'),
- ('development_plan','draft','active'),('development_plan','active','completed'),('development_plan','active','cancelled'),('development_plan','draft','cancelled'),
- ('plan_item','pending','in_progress'),('plan_item','in_progress','completed'),('plan_item','pending','cancelled'),('plan_item','in_progress','cancelled'),
- ('training_session','planned','in_progress'),('training_session','planned','cancelled'),('training_session','in_progress','completed'),('training_session','in_progress','cancelled');
-
+-- Phase 5, stage 1: learning management schema, scope helpers and RLS.
 alter table public.approval_tasks drop constraint approval_tasks_workflow_type_check;
 alter table public.approval_tasks add constraint approval_tasks_workflow_type_check
   check (workflow_type in ('evaluation','competency_assessment','course_publication','ai_recommendation','recognition_nomination'));
-
-insert into public.system_settings(key, value, description) values
- ('learning.publication_route', '"ops_submits_hr_approves"', 'Default - requires organizational validation. Operations Manager submits courses; HR Administrator approves publication.'),
- ('learning.quiz_max_attempts_default', '3', 'Default - requires organizational validation. Default maximum quiz attempts.'),
- ('ai.provider', '"gemini"', 'Gemini is the required AI provider. Credentials are server-side only.'),
- ('ai.model', '"gemini-2.5-flash"', 'Default model for development recommendations.'),
- ('ai.max_items_per_run', '10', 'Default - requires organizational validation. Maximum recommendations per generation run.'),
- ('training.attendance_recorders', '"ops_manager_or_hr"', 'Default - requires organizational validation. Who may record attendance.');
 
 create table public.courses (
   id uuid primary key default gen_random_uuid(),
@@ -475,8 +454,6 @@ create table public.ai_integration_settings (
   created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
   created_by uuid default auth.uid(), updated_by uuid
 );
-insert into public.ai_integration_settings(provider, model) values ('gemini','gemini-2.5-flash');
-
 create table public.outbox_events (
   id uuid primary key default gen_random_uuid(),
   kind text not null check (kind in ('notification','email','ai_call')),

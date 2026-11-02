@@ -1,13 +1,3 @@
-insert into public.status_transitions(entity,from_status,to_status) values
-  ('development_plan','active','draft'),
-  ('succession_plan','draft','pending_review'),
-  ('succession_plan','returned','pending_review'),
-  ('succession_plan','pending_review','approved'),
-  ('succession_plan','pending_review','returned'),
-  ('succession_plan','approved','draft'),
-  ('succession_plan','returned','draft')
-on conflict (entity,from_status,to_status) do nothing;
-
 alter table public.approval_tasks drop constraint approval_tasks_workflow_type_check;
 alter table public.approval_tasks add constraint approval_tasks_workflow_type_check
   check (workflow_type in (
