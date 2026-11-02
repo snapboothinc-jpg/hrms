@@ -27,9 +27,9 @@ export const Route = createFileRoute("/_authenticated/performance/")({
 });
 
 function Page() {
-  const { has } = usePermissions();
+  const { employeeId, has, role } = usePermissions();
   const a = useQuery({
-    queryKey: qk.perf.assignments({ all: true }),
+    queryKey: qk.perf.assignments({ all: true, employeeId, role }),
     queryFn: fetchAllAssignmentsForDashboard,
   });
   const c = useQuery({ queryKey: qk.perf.cycles(), queryFn: fetchCycles });
@@ -80,12 +80,24 @@ function Page() {
             <StatCard
               icon={ClipboardCheck}
               label="Not started / in progress"
-              value={complete ? n(["not_started", "in_progress"]) : "Capped"}
+              value={
+                complete ? n(["not_started", "in_progress", "supervisor_in_progress"]) : "Capped"
+              }
             />
             <StatCard
               icon={Clock}
               label="Awaiting review"
-              value={complete ? n(["submitted", "under_review"]) : "Capped"}
+              value={
+                complete
+                  ? n([
+                      "supervisor_pending",
+                      "department_head_pending",
+                      "hr_admin_pending",
+                      "submitted",
+                      "under_review",
+                    ])
+                  : "Capped"
+              }
               tone="warning"
             />
             <StatCard
@@ -97,7 +109,7 @@ function Page() {
             <StatCard
               icon={RotateCcw}
               label="Reopened"
-              value={complete ? n(["reopened"]) : "Capped"}
+              value={complete ? n(["returned_for_revision", "reopened"]) : "Capped"}
             />
           </div>
           <div className="mt-6 grid gap-6 lg:grid-cols-2">

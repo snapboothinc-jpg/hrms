@@ -22,8 +22,7 @@
     "db:push:dry-run": "npx supabase db push --linked --dry-run",
     "db:push": "npx supabase db push --linked",
     "db:reset:local": "npx supabase db reset --local --no-seed",
-    "db:setup:local": "node --env-file-if-exists=.env scripts/database/setup-local.mjs",
-    "db:seed:local": "node --env-file-if-exists=.env scripts/database/seed-initial.mjs"
+    "db:seed:demo": "node --env-file-if-exists=.env scripts/database/seed-demo.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"

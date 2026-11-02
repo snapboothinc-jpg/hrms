@@ -200,7 +200,7 @@ export const profileContentSchema = z
     scoring_method: z.enum(["weighted", "equal"]),
     final_score_rule: z.enum(["supervisor", "self", "average"]),
     classification_thresholds: z.array(classificationThresholdSchema).max(5),
-    performance_factors: z.array(performanceFactorSchema).length(10),
+    performance_factors: z.array(performanceFactorSchema).max(10),
     sections: z
       .array(
         z
@@ -211,54 +211,43 @@ export const profileContentSchema = z
           })
           .strict(),
       )
+      .min(1)
       .max(20),
   })
   .strict()
   .superRefine((profile, ctx) => {
+    if (!profile.sections.some((section) => section.items.length > 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["sections"],
+        message: "Add at least one job-specific performance criterion.",
+      });
+    }
+    profile.sections.forEach((section, sectionIndex) => {
+      section.items.forEach((item, itemIndex) => {
+        if (item.item_type !== "rating") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["sections", sectionIndex, "items", itemIndex, "item_type"],
+            message: "Job-specific evaluation criteria must use the configured 1–5 rating scale.",
+          });
+        }
+        if (!item.help_text?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["sections", sectionIndex, "items", itemIndex, "help_text"],
+            message: "Add a description and observable performance indicators for each criterion.",
+          });
+        }
+      });
+    });
     const codes = profile.performance_factors.map((factor) => factor.factor_code);
-    if (
-      new Set(codes).size !== performanceFactorCodes.length ||
-      performanceFactorCodes.some((code) => !codes.includes(code))
-    ) {
+    if (new Set(codes).size !== codes.length) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["performance_factors"],
-        message: "Configure each of the ten performance factors exactly once.",
+        message: "Legacy performance factor codes must be unique.",
       });
-    }
-    if (
-      profile.performance_factors.some(
-        (factor) => factor.title !== performanceFactorTitles[factor.factor_code],
-      )
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["performance_factors"],
-        message: "The original ten factor names must be preserved.",
-      });
-    }
-    if (profile.scoring_method === "weighted") {
-      const total = profile.performance_factors.reduce((sum, factor) => sum + factor.weight, 0);
-      if (Math.round(total * 100) / 100 !== 100) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["performance_factors"],
-          message: "Factor weights must total 100% when weighted scoring is selected.",
-        });
-      }
-    }
-    const weightedProfileItems = profile.sections
-      .flatMap((section) => section.items)
-      .filter((item) => item.weight > 0);
-    if (weightedProfileItems.length > 0) {
-      const total = weightedProfileItems.reduce((sum, item) => sum + item.weight, 0);
-      if (Math.round(total * 100) / 100 !== 100) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["sections"],
-          message: "Configured position-specific rating and KPI weights must total 100%.",
-        });
-      }
     }
     const thresholds = profile.classification_thresholds;
     for (let index = 0; index < thresholds.length; index += 1) {
@@ -298,38 +287,6 @@ export const addPerformanceFactorEvidenceSchema = z
     path: ["note"],
   });
 
-export const saveCriticalRequirementSchema = z
-  .object({
-    id: uuid.nullable(),
-    employee_id: uuid,
-    requirement_type: z.enum(["license", "certification", "qualification", "safety"]),
-    name: z.string().trim().min(2).max(160),
-    description: z.string().max(2000).nullable(),
-    issuing_authority: z.string().max(160).nullable(),
-    reference_number: z.string().max(120).nullable(),
-    valid_from: z.string().date().nullable(),
-    expires_on: z.string().date().nullable(),
-    file_id: uuid.nullable(),
-    is_safety_critical: z.boolean(),
-    is_active: z.boolean(),
-    ...idem,
-  })
-  .strict()
-  .refine(
-    (value) => !value.valid_from || !value.expires_on || value.expires_on >= value.valid_from,
-    { message: "Expiration must be on or after the validity start date.", path: ["expires_on"] },
-  );
-
-export const reviewCriticalRequirementSchema = z
-  .object({
-    assignment_id: uuid,
-    requirement_id: uuid,
-    compliance_status: z.enum(["compliant", "needs_review", "non_compliant"]),
-    comments: z.string().max(2000),
-    ...idem,
-  })
-  .strict();
-
 export const responseSchema = z
   .object({
     item_id: uuid,
@@ -341,39 +298,12 @@ export const responseSchema = z
   })
   .strict();
 
-export const developmentResponseSchema = z
-  .object({
-    strengths: z.string().max(4000).optional(),
-    improvement_areas: z.string().max(4000).optional(),
-    accomplishments: z.string().max(4000).optional(),
-    development_needs: z.string().max(4000).optional(),
-    career_interests: z.string().max(4000).optional(),
-    suggested_activities: z.string().max(4000).optional(),
-    personal_goals: z.string().max(4000).optional(),
-    performance_weaknesses: z.string().max(4000).optional(),
-    recommended_learning: z.string().max(4000).optional(),
-    recommended_training: z.string().max(4000).optional(),
-    competency_improvements: z.string().max(4000).optional(),
-    target_outcomes: z.string().max(4000).optional(),
-    next_steps: z.string().max(4000).optional(),
-    advancement_considerations: z.string().max(4000).optional(),
-    overall_assessment: z.string().max(4000).optional(),
-    observations: z.string().max(4000).optional(),
-    overall_recommendation: z.string().max(4000).optional(),
-    development_recommendation: z.string().max(4000).optional(),
-    improvement_priorities: z.string().max(4000).optional(),
-    review_comments: z.string().max(4000).optional(),
-    rating_difference_explanations: z.string().max(4000).optional(),
-  })
-  .strict();
-
 export const saveEvaluationSchema = z
   .object({
     assignment_id: uuid,
     respondent: z.enum(["self", "evaluator"]),
     responses: z.array(responseSchema).max(200),
-    factor_responses: z.array(performanceFactorResponseSchema).length(10),
-    development: developmentResponseSchema,
+    factor_responses: z.array(performanceFactorResponseSchema).max(10),
     overall_comment: z.string().max(8000).nullable(),
     version: z.number().int(),
   })
@@ -394,6 +324,7 @@ export const reviewEvaluationSchema = z
     assignment_id: uuid,
     decision: z.enum(["approve", "return"]),
     comments: z.string().max(4000),
+    return_to: z.enum(["employee", "supervisor", "department_head"]).optional(),
     ...idem,
   })
   .strict();
@@ -447,7 +378,6 @@ export const assessmentSchema = z
     current_level: z.number().int().min(1).max(5).nullable(),
     evidence_summary: z.string().max(4000).optional(),
     comments: z.string().max(4000).optional(),
-    assessment_method: z.string().trim().max(120).optional(),
     is_reassessment: z.boolean(),
     version: z.number().int().nullable(),
   })

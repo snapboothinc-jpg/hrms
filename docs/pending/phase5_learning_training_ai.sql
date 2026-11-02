@@ -1254,7 +1254,7 @@ revoke execute on function public.process_outbox(int) from public, anon, authent
 grant execute on function public.process_outbox(int) to service_role;
 
 -- Development demo fixtures are maintained separately in
--- scripts/database/seed-initial.mjs.
+-- supabase/seeds/development/demo.sql.
 
 -- lock down new function execution like previous migrations
 do $$ declare f record; begin

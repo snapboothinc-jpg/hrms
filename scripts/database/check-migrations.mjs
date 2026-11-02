@@ -25,48 +25,78 @@ for (const file of files) {
 }
 
 const config = await readFile(join(root, "supabase", "config.toml"), "utf8");
-if (!/\[db\.seed\][\s\S]*?enabled\s*=\s*false/i.test(config))
+if (!/\[db\.seed\]\s*enabled\s*=\s*false/i.test(config))
   throw new Error("Supabase automatic seed execution must remain disabled");
 
-const seed = await readFile(join(root, "scripts", "database", "seed-initial.mjs"), "utf8");
-const setup = await readFile(join(root, "scripts", "database", "setup-local.mjs"), "utf8");
+const seed = await readFile(join(root, "supabase", "seeds", "development", "demo.sql"), "utf8");
+if (!/insert\s+into\s+auth\.users/i.test(seed))
+  throw new Error("Demo seed must retain its auth fixtures");
 if (allSql.some((sql) => /insert\s+into\s+auth\.users/i.test(sql))) {
-  throw new Error("Development accounts must remain outside schema migrations");
+  throw new Error("Demo accounts must remain outside automatic schema migrations");
 }
 if (files.some((file) => file.startsWith("seed") || file.includes("demo_data"))) {
-  throw new Error("Initial seed data must remain outside schema migrations");
+  throw new Error("General-purpose seed data must remain outside production migrations");
+}
+if (!/crypt\('Test1234!'/i.test(seed)) {
+  throw new Error("All demo accounts must use the standardized development password");
 }
 if (
-  /insert\s+into\s+public\.(evaluation_assignments|evaluation_responses|evaluation_factor_responses|evaluation_reviews|competency_assessments|development_plans|course_enrollments|training_attendance|training_results|recognition_nominations|succession_candidates|notifications|approval_tasks)\b/i.test(
-    seed,
-  )
+  !/Demo fixtures partially exist; refusing to overwrite or duplicate existing records/.test(seed)
 ) {
-  throw new Error("Initial seed must not create employee workflow or transaction records");
+  throw new Error("Demo seed must abort rather than overwrite or duplicate partial fixtures");
 }
-if (!/extensions\.crypt\(\$\{account\.password\},\s*extensions\.gen_salt\('bf'\)\)/i.test(seed)) {
-  throw new Error("Initial account passwords must be securely hashed by PostgreSQL");
-}
-if (
-  !/is distinct from excluded\.role/i.test(seed) ||
-  !/on conflict \(id\) do nothing/i.test(seed)
-) {
-  throw new Error("Initial seed must use conflict-aware idempotent writes");
-}
-if (!/public\._seed_performance_factors\(/i.test(seed)) {
+if (!/perform\s+public\._seed_performance_factors\(/i.test(seed)) {
   throw new Error(
-    "Initial evaluation profiles must include the complete current set of performance factors",
+    "Demo evaluation profile must include the complete current set of performance factors",
   );
 }
-if (
-  !/HRMS_SEED_ENV !== "development"/.test(seed) ||
-  !/loopbackHosts\.has\(database\.hostname\)/.test(seed)
-) {
-  throw new Error("Initial seed must require development confirmation and a loopback database");
+
+const accountsBlock = seed.match(
+  /select\s+\*\s+from\s+\(values([\s\S]*?)\)\s+as\s+accounts\(id,email,name,role\)/i,
+);
+if (!accountsBlock) throw new Error("Demo seed is missing its role account list");
+const accountRows = [
+  ...accountsBlock[1].matchAll(
+    /\('([0-9a-f-]+)'::uuid,'([^']+)','([^']+)','([^']+)'(?:::public\.app_role)?\)/gi,
+  ),
+];
+const roleAliases = new Map([
+  ["super_admin", "superadmin"],
+  ["admin", "admin"],
+  ["hr_admin", "hradmin"],
+  ["dept_head", "depthead"],
+  ["supervisor", "supervisor"],
+  ["employee", "employee"],
+  ["ops_manager", "opsmanager"],
+]);
+if (accountRows.length !== roleAliases.size) {
+  throw new Error(`Expected one account for each of ${roleAliases.size} system roles`);
 }
-if (!/HRMS_SEED_ENV !== "development"/.test(setup) || !/db:reset:local/.test(setup)) {
-  throw new Error(
-    "Full local setup must require development confirmation and reset only local Supabase",
-  );
+const seenRoles = new Set();
+for (const [, , email, name, role] of accountRows) {
+  const [firstName, roleAlias] = email.split("@")[0].split("+")[0].split(".");
+  if (
+    !/^[a-z]+\.[a-z]+\+priority@gmail\.com$/i.test(email) ||
+    firstName !== name.split(/\s+/)[0].toLowerCase() ||
+    roleAlias !== roleAliases.get(role)
+  ) {
+    throw new Error(`Demo account does not match the first-name/role email format: ${email}`);
+  }
+  if (seenRoles.has(role)) throw new Error(`Duplicate demo account role: ${role}`);
+  seenRoles.add(role);
+}
+if ([...roleAliases.keys()].some((role) => !seenRoles.has(role))) {
+  throw new Error("Demo seed is missing a required system role");
+}
+const departmentBlock = seed.match(
+  /insert\s+into\s+public\.departments\([^;]+?\)\s+values([\s\S]*?);/i,
+);
+if (
+  !departmentBlock ||
+  !/Logistics Department/.test(departmentBlock[1]) ||
+  [...departmentBlock[1].matchAll(/\('[0-9a-f-]+','[^']+'/gi)].length !== 1
+) {
+  throw new Error("Demo seed must define exactly one Logistics Department");
 }
 
 const sql = allSql.join("\n");
@@ -148,5 +178,5 @@ for (const name of [
 }
 
 console.log(
-  `Migration source check passed: ${files.length} ordered Supabase SQL migrations, ${tables.size} RLS-protected public tables, ${functionHeaders.length} function definitions; key Supabase types match; automatic seeds are disabled and initial seed data is local-only.`,
+  `Migration source check passed: ${files.length} ordered Supabase SQL migrations, ${tables.size} RLS-protected public tables, ${functionHeaders.length} function definitions; key Supabase types match; automatic seeds are disabled and demo fixtures remain separate.`,
 );

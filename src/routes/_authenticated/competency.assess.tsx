@@ -58,7 +58,6 @@ type Draft = {
   current_level: number | null;
   evidence_summary: string | null;
   comments: string | null;
-  assessment_method: string | null;
   is_reassessment: boolean;
   status: string;
   version: number;
@@ -86,7 +85,6 @@ function Page() {
     current_level: null as number | null,
     evidence_summary: "",
     comments: "",
-    assessment_method: "",
     is_reassessment: s.reassess ?? false,
   });
   useEffect(() => {
@@ -100,7 +98,6 @@ function Page() {
         current_level: x.current_level,
         evidence_summary: x.evidence_summary ?? "",
         comments: x.comments ?? "",
-        assessment_method: x.assessment_method ?? "",
         is_reassessment: x.is_reassessment,
       });
   }, [existing.data]);
@@ -179,7 +176,6 @@ function Page() {
       current_level: d.current_level,
       evidence_summary: d.evidence_summary,
       comments: d.comments,
-      assessment_method: d.assessment_method,
       is_reassessment: d.is_reassessment,
     });
 
@@ -272,18 +268,6 @@ function Page() {
       </Panel>
       <Panel title="Evidence and comments">
         <div className="space-y-4">
-          <Field
-            label="Assessment method"
-            htmlFor="assessment-method"
-            hint="For example: observation, structured interview, practical demonstration, or work sample."
-          >
-            <Input
-              id="assessment-method"
-              maxLength={120}
-              value={d.assessment_method}
-              onChange={(e) => setD({ ...d, assessment_method: e.target.value })}
-            />
-          </Field>
           <Field
             label="Evidence summary"
             htmlFor="ev"

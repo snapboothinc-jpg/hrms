@@ -18,10 +18,6 @@ import {
   personalGoalProgressSchema,
   reportSchema,
   savedReportSchema,
-  performanceFactorCodes,
-  performanceFactorTitles,
-  developmentResponseSchema,
-  saveCriticalRequirementSchema,
 } from "@/lib/schemas";
 
 describe("gap calculation", () => {
@@ -113,16 +109,23 @@ describe("evaluation scale and acknowledgement validation", () => {
     scoring_method: "equal" as const,
     final_score_rule: "supervisor" as const,
     classification_thresholds: [],
-    performance_factors: performanceFactorCodes.map((factor_code, sort_order) => ({
-      factor_code,
-      title: performanceFactorTitles[factor_code],
-      description: `Description for ${factor_code}`,
-      indicators: ["Demonstrates this performance factor"],
-      weight: 10,
-      evidence_required: false,
-      sort_order,
-    })),
-    sections: [],
+    performance_factors: [],
+    sections: [
+      {
+        title: "Role-specific criteria",
+        items: [
+          {
+            label: "Accurate order processing",
+            help_text: "Processes assigned orders accurately and verifies required details.",
+            item_type: "rating",
+            weight: 0,
+            options: [],
+            evidence_required: false,
+            is_required: true,
+          },
+        ],
+      },
+    ],
   };
   it("only accepts the fixed 1–5 profile scale", () => {
     expect(profileContentSchema.safeParse(profile).success).toBe(true);
@@ -131,72 +134,20 @@ describe("evaluation scale and acknowledgement validation", () => {
     );
     expect(profileContentSchema.safeParse({ ...profile, rating_scale_max: 3 }).success).toBe(false);
   });
-  it("requires configured rating and KPI item weights to total 100 percent", () => {
-    const weightedItems = {
-      ...profile,
-      sections: [
-        {
-          title: "Position criteria",
-          items: [
-            {
-              label: "Configured rating",
-              item_type: "rating" as const,
-              weight: 60,
-              options: [],
-              evidence_required: false,
-              is_required: true,
-            },
-            {
-              label: "Configured KPI",
-              item_type: "kpi" as const,
-              weight: 40,
-              options: [],
-              kpi_target: 10,
-              evidence_required: false,
-              is_required: true,
-            },
-          ],
-        },
-      ],
-    };
-    expect(profileContentSchema.safeParse(weightedItems).success).toBe(true);
+  it("requires job-specific criteria with descriptions and observable indicators", () => {
+    expect(profileContentSchema.safeParse({ ...profile, performance_factors: [] }).success).toBe(
+      true,
+    );
+    expect(profileContentSchema.safeParse({ ...profile, sections: [] }).success).toBe(false);
     expect(
       profileContentSchema.safeParse({
-        ...weightedItems,
+        ...profile,
         sections: [
           {
-            ...weightedItems.sections[0]!,
-            items: weightedItems.sections[0]!.items.map((item) => ({ ...item, weight: 30 })),
+            title: "Missing criterion details",
+            items: [{ ...profile.sections[0]!.items[0]!, help_text: "" }],
           },
         ],
-      }).success,
-    ).toBe(false);
-  });
-  it("validates structured development responses and critical requirement dates", () => {
-    expect(
-      developmentResponseSchema.safeParse({
-        strengths: "Reliable",
-        rating_difference_explanations: "Discussed with the employee.",
-      }).success,
-    ).toBe(true);
-    expect(developmentResponseSchema.safeParse({ unknown_section: "not accepted" }).success).toBe(
-      false,
-    );
-    expect(
-      saveCriticalRequirementSchema.safeParse({
-        id: null,
-        employee_id: crypto.randomUUID(),
-        requirement_type: "license",
-        name: "Operator license",
-        description: null,
-        issuing_authority: null,
-        reference_number: null,
-        valid_from: "2026-03-01",
-        expires_on: "2026-02-01",
-        file_id: null,
-        is_safety_critical: false,
-        is_active: true,
-        idempotencyKey: crypto.randomUUID(),
       }).success,
     ).toBe(false);
   });
@@ -401,12 +352,19 @@ describe("employee-owned personal goal validation", () => {
 });
 
 describe("state machines", () => {
-  it("an approved evaluation can only be reopened", () => {
-    expect(canTransition(EVALUATION_TRANSITIONS, "approved", "reopened")).toBe(true);
-    expect(canTransition(EVALUATION_TRANSITIONS, "approved", "in_progress")).toBe(false);
+  it("an evaluation follows the supervisor, department-head, and HR sequence", () => {
+    expect(canTransition(EVALUATION_TRANSITIONS, "in_progress", "supervisor_pending")).toBe(true);
+    expect(
+      canTransition(EVALUATION_TRANSITIONS, "supervisor_in_progress", "department_head_pending"),
+    ).toBe(true);
+    expect(
+      canTransition(EVALUATION_TRANSITIONS, "department_head_pending", "hr_admin_pending"),
+    ).toBe(true);
+    expect(canTransition(EVALUATION_TRANSITIONS, "hr_admin_pending", "approved")).toBe(true);
   });
-  it("a draft evaluation cannot jump to approved", () => {
+  it("an evaluation cannot bypass approvals or reopen after final HR approval", () => {
     expect(canTransition(EVALUATION_TRANSITIONS, "in_progress", "approved")).toBe(false);
+    expect(canTransition(EVALUATION_TRANSITIONS, "approved", "returned_for_revision")).toBe(false);
   });
   it("approved assessments are final", () => {
     expect(ASSESSMENT_TRANSITIONS.approved).toEqual([]);

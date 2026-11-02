@@ -22,8 +22,6 @@ import {
   reviewEvaluationSchema,
   reopenEvaluationSchema,
   addPerformanceFactorEvidenceSchema,
-  saveCriticalRequirementSchema,
-  reviewCriticalRequirementSchema,
   createAssignmentsSchema,
   competencyFields,
   requirementSchema,
@@ -312,7 +310,6 @@ export const saveEvaluation = createServerFn({ method: "POST" })
           performance_factors: data.factor_responses,
         },
         _overall_comment: data.overall_comment,
-        _development: data.development,
         _expected: data.version,
       }),
     ),
@@ -357,6 +354,7 @@ export const reviewEvaluation = createServerFn({ method: "POST" })
         _comments: data.comments,
         _idem: data.idempotencyKey,
         _hash: await hashBody(withoutKey(data)),
+        _return_to: data.return_to ?? null,
       }),
     ),
   );
@@ -369,46 +367,6 @@ export const reopenEvaluation = createServerFn({ method: "POST" })
       rpc(context.supabase, "reopen_evaluation", {
         _assignment: data.assignment_id,
         _reason: data.reason,
-        _idem: data.idempotencyKey,
-        _hash: await hashBody(withoutKey(data)),
-      }),
-    ),
-  );
-
-export const saveCriticalRequirement = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => saveCriticalRequirementSchema.parse(d))
-  .handler(async ({ data, context }) =>
-    runOp("save_employee_critical_requirement", context.userId, async () =>
-      rpc(context.supabase, "save_employee_critical_requirement", {
-        _id: data.id,
-        _employee: data.employee_id,
-        _type: data.requirement_type,
-        _name: data.name,
-        _description: data.description ?? null,
-        _authority: data.issuing_authority ?? null,
-        _reference: data.reference_number ?? null,
-        _valid_from: data.valid_from,
-        _expires_on: data.expires_on,
-        _file: data.file_id,
-        _safety: data.is_safety_critical,
-        _active: data.is_active,
-        _idem: data.idempotencyKey,
-        _hash: await hashBody(withoutKey(data)),
-      }),
-    ),
-  );
-
-export const reviewCriticalRequirement = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => reviewCriticalRequirementSchema.parse(d))
-  .handler(async ({ data, context }) =>
-    runOp("review_evaluation_critical_requirement", context.userId, async () =>
-      rpc(context.supabase, "review_evaluation_critical_requirement", {
-        _assignment: data.assignment_id,
-        _requirement: data.requirement_id,
-        _status: data.compliance_status,
-        _comments: data.comments,
         _idem: data.idempotencyKey,
         _hash: await hashBody(withoutKey(data)),
       }),
@@ -562,7 +520,6 @@ export const saveAssessment = createServerFn({ method: "POST" })
         _comments: data.comments ?? null,
         _reassess: data.is_reassessment,
         _version: data.version,
-        _method: data.assessment_method ?? null,
       }),
     ),
   );

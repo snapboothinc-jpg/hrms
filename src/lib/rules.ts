@@ -39,7 +39,27 @@ export function canActivateProfile(items: WeightedItem[]): { ok: boolean; reason
 export function canActivateEvaluationProfile(
   factors: { factor_code: string; weight: number }[],
   scoringMethod: "weighted" | "equal",
+  criteria?: { item_type: string; weight: number }[],
 ): { ok: boolean; reason?: string } {
+  if (criteria) {
+    if (criteria.length === 0)
+      return { ok: false, reason: "Add at least one job-specific rating criterion" };
+    if (criteria.some((criterion) => criterion.item_type !== "rating"))
+      return { ok: false, reason: "Every evaluation criterion must use the 1–5 rating scale" };
+    const weighted = criteria.filter((criterion) => Number(criterion.weight) > 0);
+    if (weighted.length > 0) {
+      const total = weightTotal(
+        weighted.map((criterion) => ({ item_type: "rating", weight: criterion.weight })),
+      );
+      if (total !== 100) {
+        return {
+          ok: false,
+          reason: "Configured criterion weights must total 100 percent",
+        };
+      }
+    }
+    return { ok: true };
+  }
   const codes = new Set(factors.map((factor) => factor.factor_code));
   if (factors.length !== 10 || codes.size !== 10)
     return { ok: false, reason: "Configure all ten performance factors before activating" };

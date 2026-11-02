@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { fetchAssignments } from "@/lib/data";
+import { fetchAllAssignmentsForDashboard } from "@/lib/data";
 import { usePermissions } from "@/hooks/use-me";
 import { qk } from "@/lib/query-keys";
 import { PageHeader } from "@/components/app/kit";
@@ -17,18 +17,23 @@ export const Route = createFileRoute("/_authenticated/performance/team")({
 });
 
 function Page() {
-  const { employeeId } = usePermissions();
+  const { employeeId, role } = usePermissions();
   const q = useQuery({
-    queryKey: qk.perf.assignments({ team: employeeId }),
-    queryFn: () => fetchAssignments(),
+    queryKey: qk.perf.assignments({ team: employeeId, role }),
+    queryFn: fetchAllAssignmentsForDashboard,
   });
-  const rows = (q.data ?? []).filter((a) => a.employee_id !== employeeId);
+  const rows = (q.data?.rows ?? []).filter((assignment) => assignment.employee_id !== employeeId);
   return (
     <div>
       <PageHeader
         title="Team evaluations"
-        description="Evaluations where you are the evaluator, plus your team or department's evaluations."
+        description="Evaluations assigned to you and evaluations in your department. Your access is restricted to assigned employees and your department."
       />
+      {q.data && !q.data.complete && (
+        <p role="status" className="mb-3 text-sm text-muted-foreground">
+          Only the first 5,000 authorized evaluations are shown. The displayed list is incomplete.
+        </p>
+      )}
       <AssignmentsTable
         rows={rows}
         loading={q.isLoading}

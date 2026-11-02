@@ -7,7 +7,7 @@
 | VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY | browser (public) | Supabase client                                                                                             |
 | SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY           | server           | auth middleware, health check                                                                               |
 | SUPABASE_SERVICE_ROLE_KEY                        | server only      | account creation/deactivation (admin), file type rejection cleanup, signed evidence URLs, outbox processing |
-| DATABASE_URL                                     | seed only        | Direct PostgreSQL connection for local development account seeding                                             |
+| DATABASE_URL                                     | seed only        | Direct PostgreSQL connection for explicitly requested development fixture seeding                           |
 | GEMINI_API_KEY                                   | server only      | Required default provider credential for Gemini 2.5 Flash                                                   |
 | AI_MODEL                                         | server only      | Optional Gemini model override; default is `gemini-2.5-flash`                                               |
 | OUTBOX_PROCESSOR_SECRET                          | server only      | bearer secret for the outbox processing endpoint                                                            |
@@ -21,8 +21,20 @@ page names a missing variable but never its value.
 1. Supabase CLI is the sole migration manager. Run `npm run db:check` and inspect `npm run db:migrations:list`. For local initialization, `npx supabase start` applies `supabase/migrations/`; for a linked database, review `npm run db:push:dry-run` before the deliberate `npm run db:push`. Never use linked resets in deployment or point unreviewed migrations at production.
 2. Schema changes are reviewed SQL migrations in `supabase/migrations/`, ordered by their 14-digit Supabase migration versions. The former Drizzle journal timestamps were preserved as these versions; SQL bodies were moved without regeneration. Drizzle ORM and Drizzle Kit are not used by application code and are no longer part of the migration workflow.
 3. Migration 0000 is the base identity/organization schema. The original source was consolidated into seven domain migrations; `0007_personal_goals.sql`, `0008_report_workspace.sql`, and `0009_phase3_approvals_qualification.sql` are additive Phase 3 changes for employee-owned goals, saved reports/export metadata, approval and qualification workflows, and learning/reassessment deadlines. Migration 0005 blocks before altering the fixed 1–5 scale if existing scores/snapshots require review. Migration 0003 sets Gemini-only provider configuration. Migration 0019 adds versioned, position-specific performance factors and independent self/supervisor scoring; configure a profile and its scoring/classification rules before activating it for a cycle.
-4. Supabase CLI seed execution is explicitly disabled in `supabase/config.toml`; local setup resets with `--no-seed` and then runs `scripts/database/seed-initial.mjs`. The script only accepts loopback database and Auth hosts, requires a distinct password of at least 12 characters for each role via `HRMS_DEV_*_PASSWORD`, and verifies the local account logins. Use `npm run db:setup:local` for a fresh local database or `npm run db:seed:local` for an already-migrated local database. There is no current production seed workflow; never use local seed credentials in production.
-5. Local account emails and setup requirements are listed in [`supabase/seeds/development/README.md`](../supabase/seeds/development/README.md). Passwords are configured through the local environment and are intentionally not embedded in source or documentation. Existing legacy demo accounts, if present in a hosted project, must have passwords rotated or reset through the supported Auth administration process.
+4. Supabase CLI seed execution is explicitly disabled in `supabase/config.toml`; even local reset is invoked with `--no-seed`. The development demo seed is in `supabase/seeds/development/demo.sql`, outside migrations. On an isolated database, set `HRMS_SEED_ENV=development` and run `npm run db:seed:demo` (requires `psql` and `DATABASE_URL`). Loopback database hosts are allowed directly; a remote development host additionally requires `HRMS_SEED_REMOTE_CONFIRM` to exactly match its hostname. The SQL seed is repeat-safe for a complete fixture set and aborts if it finds a partial/conflicting fixture. Never seed production.
+5. Seed accounts use `firstname.role+priority@gmail.com` addresses and the shared development password `Test1234!`. The seed contains seven role accounts and one Logistics Department. Remove demo data by signing in as a non-demo Super Admin and calling `remove_demo_data()`. `reset_demo_data()` clears mutable demo rows but does not recreate them; rebuild the isolated database and rerun the seed to restore a complete workflow.
+
+| Role               | Seed account                           |
+| ------------------ | -------------------------------------- |
+| Super Admin        | `victor.superadmin+priority@gmail.com` |
+| Admin              | `nina.admin+priority@gmail.com`        |
+| HR Administrator   | `liza.hradmin+priority@gmail.com`      |
+| Department Head    | `maria.depthead+priority@gmail.com`    |
+| Supervisor         | `jose.supervisor+priority@gmail.com`   |
+| Employee           | `ana.employee+priority@gmail.com`      |
+| Operations Manager | `carlo.opsmanager+priority@gmail.com`  |
+
+The shared password for every account in this table is `Test1234!`; use it only in isolated development environments.
 
 | Supabase migration file                                 | Classification and responsibility                                                            |
 | ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
@@ -46,12 +58,11 @@ page names a missing variable but never its value.
 | `20261030230616_mark_demo_reporting_lines.sql`          | Canonical replacement adding reporting-line fixture marking                                  |
 | `20261030230617_compact_demo_reset.sql`                 | Canonical forward demo reset function correction                                             |
 | `20261030230618_performance_evaluation_factors.sql`     | Canonical schema/functions: versioned factors, responses, scoring                            |
-| `20261101010000_complete_evaluation_forms.sql`           | Canonical forward changes: complete evaluation form workflows                                |
-| `20261101020000_generalize_super_admin_bootstrap.sql`    | Canonical forward function change: guarded initial Super Admin bootstrap                    |
 
-`scripts/database/seed-initial.mjs` seeds the minimal local development accounts and baseline
-organization only. It is not a migration, requires distinct environment-provided passwords, and
-rejects remote database and Auth hosts.
+`supabase/seeds/development/demo.sql` contains the separated, minimal Logistics Department development
+fixtures. It is not a migration and is disabled in Supabase CLI seed configuration. Each seeded role is
+assigned by the permissions catalogue from the migrations; the shared fixture password
+is `Test1234!`. Never use this password outside isolated development data.
 The previous Drizzle snapshots were empty and did not represent the SQL objects.
 `npm run db:check` validates migration naming/order, seed separation, table RLS enablement,
 SECURITY DEFINER search paths, no direct authenticated table-write grants, and key
@@ -61,13 +72,12 @@ migrations in isolated PostgreSQL/Supabase.
 `20261030230602_learning_training_ai.sql`; it is not part of the migration sequence. Apply future schema changes only through
 the canonical migrations under `supabase/migrations/`.
 
-On 2026-11-01 the linked project `cmkmipoygxoktknpfgnq` was inspected read-only:
-20 repository migrations were applied, while `20261101010000` and
-`20261101020000` were pending in the dry run. Seven legacy demo Auth accounts and
-their role assignments were present. No reset or migration push was performed
-during that inspection. Recheck the target and migration status before any
-hosted operation; this evidence does not establish status in other environments.
-Local Postgres/Supabase replay must be run before deployment.
+The linked project was inspected read-only during standardization: Supabase reported no
+migration rows, no Supabase/Drizzle migration tracking tables were present, and the checked core tables
+(`profiles`, `employees`, `role_permissions`, and `evaluation_profile_factors`) did not
+exist. This is evidence for that linked project only; migration status in any other
+environment remains unknown. No migration was pushed. Local Postgres/Supabase replay
+must be run before deployment.
 
 ## Health
 

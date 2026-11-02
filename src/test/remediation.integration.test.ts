@@ -3,12 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const url = process.env.HRMS_STAGING_SUPABASE_URL ?? "";
 const key = process.env.HRMS_STAGING_SUPABASE_PUBLISHABLE_KEY ?? "";
-const passwords = {
-  employee: process.env.HRMS_STAGING_EMPLOYEE_PASSWORD ?? "",
-  supervisor: process.env.HRMS_STAGING_SUPERVISOR_PASSWORD ?? "",
-  operations: process.env.HRMS_STAGING_OPS_MANAGER_PASSWORD ?? "",
-  hr: process.env.HRMS_STAGING_HR_ADMIN_PASSWORD ?? "",
-};
+const password = process.env.HRMS_STAGING_DEMO_PASSWORD ?? "";
 const fixtures = {
   acknowledgement: process.env.HRMS_STAGING_ACK_ASSIGNMENT_ID ?? "",
   patch: process.env.HRMS_STAGING_PATCH_COURSE_ID ?? "",
@@ -21,17 +16,11 @@ const configured =
   process.env.HRMS_TEST_ENV === "staging" &&
   url &&
   key &&
-  Object.values(passwords).every(Boolean) &&
+  password &&
   Object.values(fixtures).every(Boolean);
 const stagingDescribe = configured ? describe : describe.skip;
-const emails = {
-  employee: process.env.HRMS_STAGING_EMPLOYEE_EMAIL ?? "employee@hrms.test",
-  supervisor: process.env.HRMS_STAGING_SUPERVISOR_EMAIL ?? "supervisor@hrms.test",
-  operations: process.env.HRMS_STAGING_OPS_MANAGER_EMAIL ?? "operations-manager@hrms.test",
-  hr: process.env.HRMS_STAGING_HR_ADMIN_EMAIL ?? "hr-admin@hrms.test",
-};
 
-async function login(email: string, password: string): Promise<SupabaseClient> {
+async function login(email: string): Promise<SupabaseClient> {
   const client = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -56,10 +45,10 @@ stagingDescribe("HRMS remediation workflows (isolated staging only)", () => {
 
   beforeAll(async () => {
     [employee, supervisor, operations, hr] = await Promise.all([
-      login(emails.employee, passwords.employee),
-      login(emails.supervisor, passwords.supervisor),
-      login(emails.operations, passwords.operations),
-      login(emails.hr, passwords.hr),
+      login("ana.employee+priority@gmail.com"),
+      login("jose.supervisor+priority@gmail.com"),
+      login("carlo.opsmanager+priority@gmail.com"),
+      login("liza.hradmin+priority@gmail.com"),
     ]);
   });
 

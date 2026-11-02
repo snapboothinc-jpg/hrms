@@ -65,12 +65,15 @@ export function AssignmentsTable({
     },
     {
       header: "Supervisor score",
-      accessorFn: (r) => (r.supervisor_score == null ? "—" : `${r.supervisor_score} / 5`),
+      accessorFn: (r) =>
+        (hideEmployee && r.status !== "approved") || r.supervisor_score == null
+          ? "—"
+          : `${r.supervisor_score} / 5`,
     },
     {
       header: "Final score",
       accessorFn: (r) =>
-        r.final_score == null
+        r.status !== "approved" || r.final_score == null
           ? "—"
           : `${r.final_score} / 5${r.classification ? ` · ${r.classification}` : ""}`,
     },
@@ -102,13 +105,27 @@ export function AssignmentsTable({
           className="w-44"
         >
           <option value="">All statuses</option>
-          {["not_started", "in_progress", "submitted", "under_review", "approved", "reopened"].map(
-            (s) => (
-              <option key={s} value={s}>
-                {s.replace("_", " ")}
-              </option>
-            ),
-          )}
+          {[
+            "not_started",
+            "in_progress",
+            "employee_submitted",
+            "supervisor_pending",
+            "supervisor_in_progress",
+            "supervisor_submitted",
+            "department_head_pending",
+            "department_head_approved",
+            "hr_admin_pending",
+            "hr_admin_approved",
+            "returned_for_revision",
+            "approved",
+            "submitted",
+            "under_review",
+            "reopened",
+          ].map((s) => (
+            <option key={s} value={s}>
+              {s.replaceAll("_", " ")}
+            </option>
+          ))}
         </NativeSelect>
       }
       empty={<EmptyState icon={ClipboardCheck} title={emptyTitle} description={emptyText} />}

@@ -141,7 +141,7 @@ Super Admin
 3. RLS policies on protected tables.
 4. Record scope based on role, department, reporting line, and assignment:
    - Employees: own records only.
-   - Supervisors: direct reports (current reporting line).
+   - Supervisors: direct reports for team functions; performance evaluations are limited to the assigned evaluator.
    - Department Heads: their department(s).
    - HR Administrators: all employees, with succession records restricted to explicitly authorized users.
    - Operations Manager: learning and training records, plus assessment results needed for planning.
@@ -152,17 +152,23 @@ Super Admin
    Module 1: Performance Management
    Pages: Performance Dashboard, Evaluation Cycles, Evaluation Assignments, My Evaluations, Team Evaluations, Evaluation Form, Evaluation Detail, Evaluation History, Evaluation Profiles, Evaluation Profile Builder, Position Evaluation Matrix, Performance Reports.
 
-Process: Cycle setup, employee and evaluator assignment, status tracking (not started, in progress, submitted, under review, approved, reopened), self-evaluation where configured, supervisor evaluation, save draft, submit, review and approval, comments and feedback, evidence attachments, evaluation history, reopening with a recorded reason, audit trail.
+Process: Cycle setup, employee and evaluator assignment, status tracking (not started, in progress, Supervisor pending, Department Head pending, HR Admin pending, returned for revision, final approved), self-evaluation where configured, supervisor evaluation, save draft, submit, review and approval, comments and feedback, evidence attachments, submission history, return-for-revision routing, and audit trail.
+
+Performance evaluations follow one sequential workflow: Employee self-evaluation (when configured) → assigned Supervisor assessment → Department Head approval → HR Admin approval. An evaluation is final only after both approval stages. A return records the reviewer, reason, timestamp, and return target; later submissions are retained as immutable history.
+
+Employee and Supervisor forms use only two main sections: read-only Employee & Job Context and Job-Specific Performance Criteria. Both respondents use the same criteria from the assigned profile version. Each criterion supports a 1–5 rating, observations, and evidence. Employee responses cannot be edited after submission unless returned for revision; Supervisor responses are independent.
+
+Department Heads can review complete evaluations within their department. HR Admins can review evaluations across departments after Department Head approval. Approval decisions and comments are stored separately from employee and supervisor assessments. Evidence links and review access are scoped by assignment and role.
 
 Evaluation Profiles (critical requirement):
 
 - Profiles are position-specific and versioned. Do not use one fixed checklist for everyone.
-- Each profile has: position, name, description, version number, effective date, status (draft, active, archived), sections, criteria, KPIs, competencies, item types, weights, rating scale, evidence requirements, and instructions.
-- Common evaluation standards (process, rating framework) are shared. Criteria, KPIs, competencies, and weights vary by position.
+- Each profile has: position, name, description, version number, effective date, status (draft, active, archived), sections, job-specific rating criteria, criterion descriptions and observable indicators, optional weights, evidence requirements, rating scale, and instructions.
+- Common process and the configured 1–5 rating scale are shared. Criteria and optional weights vary by position. Competency proficiency remains separate from performance ratings.
 - Only one version per position may be active at a time. Activating a version archives the previous one for new evaluations.
 - When an evaluation is created, copy the profile version and its criteria into the evaluation. Editing a profile later never changes completed evaluations.
-- Weights in an active profile must total 100 percent. Validate this before activation.
-- Item types: numeric rating, short text, long text, single choice, multiple choice, yes/no, KPI with target and actual value.
+- Criterion weights are optional. A score is shown only when the configured scoring method and weights support a complete calculation; no weights or thresholds are invented.
+- Profile activation requires at least one named, described 1–5 rating criterion. The conceptual ten performance factors are not a universal form checklist.
   Module 2: Competency Management
   Pages: Competency Dashboard, Competency Library, Competency Detail, Job Competency Requirements, Employee Competency Matrix, Competency Assessment Form, Competency Gap Analysis, Competency History.
 

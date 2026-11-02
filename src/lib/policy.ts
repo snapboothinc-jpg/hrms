@@ -526,12 +526,23 @@ export function canSee(item: NavItem, perms: Set<string>, hasEmployee: boolean) 
 
 /** Status machines (mirror of public.status_transitions — the DB is authoritative). */
 export const EVALUATION_TRANSITIONS: Record<string, string[]> = {
-  not_started: ["in_progress", "submitted"],
-  in_progress: ["in_progress", "submitted"],
-  reopened: ["in_progress", "submitted"],
-  submitted: ["under_review", "approved", "reopened"],
-  under_review: ["approved", "reopened"],
-  approved: ["reopened"],
+  not_started: [
+    "in_progress",
+    "supervisor_pending",
+    "supervisor_in_progress",
+    "department_head_pending",
+  ],
+  in_progress: ["in_progress", "supervisor_pending"],
+  returned_for_revision: [
+    "in_progress",
+    "supervisor_pending",
+    "supervisor_in_progress",
+    "department_head_pending",
+  ],
+  supervisor_pending: ["supervisor_in_progress", "department_head_pending"],
+  supervisor_in_progress: ["supervisor_in_progress", "department_head_pending"],
+  department_head_pending: ["returned_for_revision", "hr_admin_pending"],
+  hr_admin_pending: ["returned_for_revision", "department_head_pending", "approved"],
 };
 
 export const ASSESSMENT_TRANSITIONS: Record<string, string[]> = {

@@ -1,22 +1,16 @@
 import { createFileRoute, useBlocker } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, CheckCircle2, CopyPlus, Plus, Save, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { check, fetchCompetencies } from "@/lib/data";
+import { check } from "@/lib/data";
 import {
   activateProfileVersion,
   newProfileVersion,
   saveProfileVersion,
 } from "@/lib/api/actions.functions";
-import {
-  profileContentSchema,
-  itemTypes,
-  ITEM_TYPE_LABELS,
-  performanceFactorCodes,
-  performanceFactorTitles,
-} from "@/lib/schemas";
+import { profileContentSchema } from "@/lib/schemas";
 import { canActivateEvaluationProfile } from "@/lib/rules";
 import { useAction } from "@/hooks/use-action";
 import { qk } from "@/lib/query-keys";
@@ -27,6 +21,7 @@ import {
   ConfirmDialog,
   LoadingRows,
   EmptyState,
+  ErrorState,
   Field,
   NativeSelect,
   fmtDate,
@@ -52,7 +47,7 @@ export const Route = createFileRoute("/_authenticated/performance/profiles/$id")
 type Item = {
   label: string;
   help_text?: string;
-  item_type: (typeof itemTypes)[number];
+  item_type: "rating";
   weight: number;
   options: string[];
   kpi_target?: number | "" | null;
@@ -75,16 +70,6 @@ type Version = {
   version: number;
   activated_at: string | null;
 };
-type PerformanceFactor = {
-  factor_code: (typeof performanceFactorCodes)[number];
-  title: string;
-  description: string;
-  indicators: string[];
-  weight: number;
-  evidence_required: boolean;
-  sort_order: number;
-};
-
 function Page() {
   const { id } = Route.useParams();
   const profile = useQuery({
@@ -125,6 +110,8 @@ function Page() {
   });
 
   if (profile.isLoading) return <LoadingRows />;
+  if (profile.error)
+    return <ErrorState error={profile.error} onRetry={() => void profile.refetch()} />;
   if (!profile.data?.p) return <EmptyState title="Profile not found" />;
   return (
     <div>
@@ -172,7 +159,7 @@ function VersionEditor({ version }: { version: Version }) {
   const content = useQuery({
     queryKey: [...qk.perf.all, "version-content", version.id, version.version],
     queryFn: async () => {
-      const [sectionsResult, itemsResult, factorsResult] = await Promise.all([
+      const [sectionsResult, itemsResult] = await Promise.all([
         supabase
           .from("evaluation_sections")
           .select("*")
@@ -183,11 +170,6 @@ function VersionEditor({ version }: { version: Version }) {
           .select("*")
           .eq("version_id", version.id)
           .order("sort_order"),
-        supabase
-          .from("evaluation_profile_factors")
-          .select("*")
-          .eq("version_id", version.id)
-          .order("sort_order"),
       ]);
       const secs = check(sectionsResult) as {
         id: string;
@@ -195,7 +177,6 @@ function VersionEditor({ version }: { version: Version }) {
         description: string | null;
       }[];
       const items = check(itemsResult) as (Item & { section_id: string; options: string[] })[];
-      const factors = check(factorsResult) as PerformanceFactor[];
       return {
         sections: secs.map((s) => ({
           title: s.title,
@@ -205,21 +186,19 @@ function VersionEditor({ version }: { version: Version }) {
             .map((i) => ({
               label: i.label,
               help_text: i.help_text ?? "",
-              item_type: i.item_type,
+              item_type: "rating",
               weight: Number(i.weight),
               options: i.options ?? [],
               kpi_target: i.kpi_target ?? "",
               kpi_unit: i.kpi_unit ?? "",
               competency_id: i.competency_id ?? "",
               evidence_required: i.evidence_required,
-              is_required: i.is_required,
+              is_required: true,
             })),
         })) as Section[],
-        factors,
       };
     },
   });
-  const comps = useQuery({ queryKey: qk.comp.library(), queryFn: fetchCompetencies });
   const [sections, setSections] = useState<Section[] | null>(null);
   const [meta, setMeta] = useState({
     rating_scale_max: version.rating_scale_max,
@@ -231,20 +210,14 @@ function VersionEditor({ version }: { version: Version }) {
   });
   const [dirty, setDirty] = useState(false);
   const [confirmActivate, setConfirmActivate] = useState(false);
-  const [factors, setFactors] = useState<PerformanceFactor[] | null>(null);
   useEffect(() => {
     if (content.data && !sections) setSections(content.data.sections);
-    if (content.data && !factors) setFactors(content.data.factors);
-  }, [content.data, sections, factors]);
+  }, [content.data, sections]);
   useBlocker({
     shouldBlockFn: () => dirty && !window.confirm("You have unsaved changes. Leave anyway?"),
     enableBeforeUnload: () => dirty,
   });
 
-  const factorWeightTotal = useMemo(
-    () => (factors ?? []).reduce((total, factor) => total + Number(factor.weight), 0),
-    [factors],
-  );
   const save = useAction(useServerFn(saveProfileVersion), {
     invalidate: [qk.perf.all],
     success: "Draft saved",
@@ -260,26 +233,21 @@ function VersionEditor({ version }: { version: Version }) {
     setSections((s) => fn(structuredClone(s ?? [])));
     setDirty(true);
   };
-  const updateFactor = (index: number, patch: Partial<PerformanceFactor>) => {
-    setFactors((current) =>
-      (current ?? []).map((factor, position) =>
-        position === index ? { ...factor, ...patch } : factor,
-      ),
-    );
-    setDirty(true);
-  };
   const doSave = () => {
-    const body = { ...meta, sections: sections ?? [], performance_factors: factors ?? [] };
+    const body = { ...meta, sections: sections ?? [], performance_factors: [] };
     const parsed = profileContentSchema.safeParse(body);
     if (!parsed.success) {
-      toast.error(parsed.error.issues[0]?.message ?? "Check the profile items");
+      toast.error(parsed.error.issues[0]?.message ?? "Check the profile criteria");
       return;
     }
     save.mutate({ version_id: version.id, version: version.version, content: parsed.data });
   };
 
-  if (content.isLoading || !sections || !factors) return <LoadingRows />;
-  const act = canActivateEvaluationProfile(factors, meta.scoring_method);
+  if (content.error)
+    return <ErrorState error={content.error} onRetry={() => void content.refetch()} />;
+  if (content.isLoading || !sections) return <LoadingRows />;
+  const criteria = sections.flatMap((section) => section.items);
+  const act = canActivateEvaluationProfile([], meta.scoring_method, criteria);
   return (
     <div className="space-y-4">
       <Panel>
@@ -299,20 +267,6 @@ function VersionEditor({ version }: { version: Version }) {
               }}
             />
           </Field>
-          <Field label="Factor weighting" htmlFor="scoring-method">
-            <NativeSelect
-              id="scoring-method"
-              value={meta.scoring_method}
-              disabled={!editable}
-              onChange={(e) => {
-                setMeta({ ...meta, scoring_method: e.target.value as "equal" | "weighted" });
-                setDirty(true);
-              }}
-            >
-              <option value="equal">Equal weighting</option>
-              <option value="weighted">Configured factor weights</option>
-            </NativeSelect>
-          </Field>
           <Field label="Final score rule" htmlFor="final-score-rule">
             <NativeSelect
               id="final-score-rule"
@@ -331,28 +285,6 @@ function VersionEditor({ version }: { version: Version }) {
               <option value="average">Average of both scores</option>
             </NativeSelect>
           </Field>
-          <div className="md:col-span-2">
-            <p className="font-data text-sm font-semibold">
-              {meta.scoring_method === "weighted" ? "Configured weight total" : "Weights ignored"}
-            </p>
-            <p
-              className={cn(
-                "font-data text-2xl font-bold",
-                meta.scoring_method === "equal" || Math.round(factorWeightTotal * 100) / 100 === 100
-                  ? "text-success"
-                  : "text-destructive",
-              )}
-              aria-live="polite"
-            >
-              {factorWeightTotal}%{" "}
-              {meta.scoring_method === "equal" ||
-              Math.round(factorWeightTotal * 100) / 100 === 100 ? (
-                <CheckCircle2 className="inline size-5" aria-label="valid" />
-              ) : (
-                <span className="text-sm">(must be 100%)</span>
-              )}
-            </p>
-          </div>
           <div className="md:col-span-4">
             <Field label="Instructions" htmlFor="in">
               <Textarea
@@ -463,81 +395,6 @@ function VersionEditor({ version }: { version: Version }) {
             ))}
           </div>
         </div>
-        <div className="mt-4 space-y-3 border-t pt-4">
-          <div>
-            <h3 className="font-semibold">Ten performance factors</h3>
-            <p className="text-sm text-muted-foreground">
-              Configure the position-specific indicators and evidence expectations for each factor.
-              Only these ratings contribute to the performance score.
-            </p>
-          </div>
-          {factors.map((factor, index) => (
-            <div key={factor.factor_code} className="rounded-md border bg-background p-3">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h4 className="font-semibold">
-                  {performanceFactorTitles[factor.factor_code]}
-                  {factor.factor_code === "safety_consciousness_equipment" && (
-                    <Tag tone="warning">Safety-critical</Tag>
-                  )}
-                </h4>
-                {meta.scoring_method === "weighted" && (
-                  <Field label="Weight %" htmlFor={`factor-weight-${index}`}>
-                    <Input
-                      id={`factor-weight-${index}`}
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={0.01}
-                      value={factor.weight}
-                      disabled={!editable}
-                      onChange={(e) => updateFactor(index, { weight: Number(e.target.value) })}
-                      className="w-28"
-                    />
-                  </Field>
-                )}
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <Field label="Description" htmlFor={`factor-description-${index}`}>
-                  <Textarea
-                    id={`factor-description-${index}`}
-                    value={factor.description}
-                    maxLength={2000}
-                    disabled={!editable}
-                    onChange={(e) => updateFactor(index, { description: e.target.value })}
-                  />
-                </Field>
-                <Field
-                  label="Position-specific indicators (one per line)"
-                  htmlFor={`factor-indicators-${index}`}
-                >
-                  <Textarea
-                    id={`factor-indicators-${index}`}
-                    value={factor.indicators.join("\n")}
-                    disabled={!editable}
-                    onChange={(e) =>
-                      updateFactor(index, {
-                        indicators: e.target.value
-                          .split("\n")
-                          .map((indicator) => indicator.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                  />
-                </Field>
-              </div>
-              <label className="mt-3 flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={factor.evidence_required}
-                  disabled={!editable}
-                  onCheckedChange={(checked) =>
-                    updateFactor(index, { evidence_required: checked === true })
-                  }
-                />
-                Supporting evidence required to submit
-              </label>
-            </div>
-          ))}
-        </div>
         {!editable && (
           <p className="mt-3 text-sm text-muted-foreground">
             This version is {version.status}
@@ -582,7 +439,7 @@ function VersionEditor({ version }: { version: Version }) {
               <div key={ii} className="rounded-md border bg-background p-3">
                 <div className="grid gap-3 md:grid-cols-12">
                   <div className="md:col-span-5">
-                    <Field label="Item" htmlFor={`l${si}-${ii}`}>
+                    <Field label="Criterion name" htmlFor={`l${si}-${ii}`}>
                       <Input
                         id={`l${si}-${ii}`}
                         value={it.label}
@@ -597,26 +454,8 @@ function VersionEditor({ version }: { version: Version }) {
                     </Field>
                   </div>
                   <div className="md:col-span-3">
-                    <Field label="Type" htmlFor={`t${si}-${ii}`}>
-                      <NativeSelect
-                        id={`t${si}-${ii}`}
-                        value={it.item_type}
-                        disabled={!editable}
-                        onChange={(e) =>
-                          update((x) => {
-                            const t = e.target.value as Item["item_type"];
-                            x[si].items[ii].item_type = t;
-                            if (!["rating", "kpi"].includes(t)) x[si].items[ii].weight = 0;
-                            return x;
-                          })
-                        }
-                      >
-                        {itemTypes.map((t) => (
-                          <option key={t} value={t}>
-                            {ITEM_TYPE_LABELS[t]}
-                          </option>
-                        ))}
-                      </NativeSelect>
+                    <Field label="Rating scale">
+                      <p className="rounded-md border bg-muted px-3 py-2 text-sm">1–5</p>
                     </Field>
                   </div>
                   <div className="md:col-span-2">
@@ -627,7 +466,7 @@ function VersionEditor({ version }: { version: Version }) {
                         min={0}
                         max={100}
                         value={it.weight}
-                        disabled={!editable || !["rating", "kpi"].includes(it.item_type)}
+                        disabled={!editable}
                         onChange={(e) =>
                           update((x) => {
                             x[si].items[ii].weight = Number(e.target.value);
@@ -673,7 +512,7 @@ function VersionEditor({ version }: { version: Version }) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          aria-label="Remove item"
+                          aria-label="Remove criterion"
                           onClick={() =>
                             update((x) => {
                               x[si].items.splice(ii, 1);
@@ -686,100 +525,26 @@ function VersionEditor({ version }: { version: Version }) {
                       </>
                     )}
                   </div>
-                  {it.item_type === "kpi" && (
-                    <>
-                      <div className="md:col-span-3">
-                        <Field label="KPI target" htmlFor={`k${si}-${ii}`}>
-                          <Input
-                            id={`k${si}-${ii}`}
-                            type="number"
-                            value={it.kpi_target ?? ""}
-                            disabled={!editable}
-                            onChange={(e) =>
-                              update((x) => {
-                                x[si].items[ii].kpi_target =
-                                  e.target.value === "" ? "" : Number(e.target.value);
-                                return x;
-                              })
-                            }
-                          />
-                        </Field>
-                      </div>
-                      <div className="md:col-span-2">
-                        <Field label="Unit" htmlFor={`u${si}-${ii}`}>
-                          <Input
-                            id={`u${si}-${ii}`}
-                            value={it.kpi_unit ?? ""}
-                            disabled={!editable}
-                            onChange={(e) =>
-                              update((x) => {
-                                x[si].items[ii].kpi_unit = e.target.value;
-                                return x;
-                              })
-                            }
-                          />
-                        </Field>
-                      </div>
-                    </>
-                  )}
-                  {["single_choice", "multi_choice"].includes(it.item_type) && (
-                    <div className="md:col-span-5">
-                      <Field label="Options (comma separated)" htmlFor={`o${si}-${ii}`}>
-                        <Input
-                          id={`o${si}-${ii}`}
-                          value={it.options.join(", ")}
-                          disabled={!editable}
-                          onChange={(e) =>
-                            update((x) => {
-                              x[si].items[ii].options = e.target.value
-                                .split(",")
-                                .map((o) => o.trim())
-                                .filter(Boolean);
-                              return x;
-                            })
-                          }
-                        />
-                      </Field>
-                    </div>
-                  )}
-                  <div className="md:col-span-4">
-                    <Field label="Linked competency" htmlFor={`c${si}-${ii}`}>
-                      <NativeSelect
-                        id={`c${si}-${ii}`}
-                        value={it.competency_id ?? ""}
+                  <div className="md:col-span-12">
+                    <Field
+                      label="Description and observable performance indicators"
+                      htmlFor={`description-${si}-${ii}`}
+                    >
+                      <Textarea
+                        id={`description-${si}-${ii}`}
+                        value={it.help_text ?? ""}
+                        maxLength={2000}
                         disabled={!editable}
                         onChange={(e) =>
                           update((x) => {
-                            x[si].items[ii].competency_id = e.target.value;
+                            x[si].items[ii].help_text = e.target.value;
                             return x;
                           })
                         }
-                      >
-                        <option value="">None</option>
-                        {comps.data
-                          ?.filter((c) => c.status === "active")
-                          .map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                            </option>
-                          ))}
-                      </NativeSelect>
+                      />
                     </Field>
                   </div>
                   <div className="flex items-center gap-4 md:col-span-12">
-                    <label className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={it.is_required}
-                        disabled={!editable}
-                        onCheckedChange={(c) =>
-                          update((x) => {
-                            x[si].items[ii].is_required = c === true;
-                            return x;
-                          })
-                        }
-                      />{" "}
-                      Required
-                    </label>
                     <label className="flex items-center gap-2 text-sm">
                       <Checkbox
                         checked={it.evidence_required}
@@ -819,7 +584,7 @@ function VersionEditor({ version }: { version: Version }) {
                   })
                 }
               >
-                <Plus /> Add item
+                <Plus /> Add criterion
               </Button>
             )}
           </div>
