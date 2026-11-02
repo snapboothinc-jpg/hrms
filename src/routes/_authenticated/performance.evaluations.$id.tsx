@@ -154,7 +154,7 @@ function Page() {
       const assignmentResult = await supabase
         .from("evaluation_assignments")
         .select(
-          "*, employee:employees!evaluation_assignments_employee_id_fkey(first_name,last_name,employee_code,user_id,department:departments(name),position:positions(title)), evaluator:employees!evaluation_assignments_evaluator_id_fkey(first_name,last_name,user_id), cycle:evaluation_cycles(name,due_date,period_start,period_end), profile_version:evaluation_profile_versions(position:positions(title,department:departments(name)))",
+          "*, employee:employees!evaluation_assignments_employee_id_fkey(first_name,last_name,employee_code,user_id,department:departments!employees_department_id_fkey(name),position:positions(title)), evaluator:employees!evaluation_assignments_evaluator_id_fkey(first_name,last_name,user_id), cycle:evaluation_cycles(name,due_date,period_start,period_end), profile_version:evaluation_profile_versions(position:positions!evaluation_profile_versions_position_id_fkey(title,department:departments(name)))",
         )
         .eq("id", id)
         .maybeSingle();
